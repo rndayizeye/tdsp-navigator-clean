@@ -22,7 +22,7 @@ nyc_crashes:
   socrata:  
     dataset_id: "h9gi-nx95"
     domain: "data.cityofnewyork.us"
-    app_token: "MJoLUJskvtR1AsFMHSIGUuUXU"
+    app_token: ${credentials:socrata_app_token}
   incremental:
     date_column: "crash_date"
       # Or your preferred start date

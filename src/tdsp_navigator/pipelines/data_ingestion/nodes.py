@@ -240,3 +240,20 @@ def _build_metadata(new_df: pd.DataFrame, combined_df: pd.DataFrame) -> Dict:
     }
     
     return metadata
+
+def _normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize column names to snake_case to match Socrata API output."""
+    df = df.copy()
+    df.columns = (
+        df.columns
+        .str.strip()
+        .str.lower()
+        .str.replace(" ", "_", regex=False)
+    )
+    # Fix the two vehicle code columns that differ between source and API
+    rename_map = {
+        "vehicle_type_code1": "vehicle_type_code_1",
+        "vehicle_type_code2": "vehicle_type_code_2",
+    }
+    df = df.rename(columns=rename_map)
+    return df
