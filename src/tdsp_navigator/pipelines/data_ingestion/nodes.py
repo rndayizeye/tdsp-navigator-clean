@@ -143,6 +143,7 @@ def _fetch_from_socrata(
             return pd.DataFrame()
         
         new_df = pd.DataFrame.from_records(results)
+        new_df = _normalize_column_names(new_df)
         logger.info(f"Received {len(new_df)} records from API")
         
         # Validate required columns
