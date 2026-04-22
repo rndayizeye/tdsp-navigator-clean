@@ -85,6 +85,8 @@ def _normalize_existing_data(existing_data: Any) -> pd.DataFrame:
     if existing_data.empty:
         logger.info("Existing data is empty. Starting fresh.")
         return pd.DataFrame()
+    # Normalize column names to match API output to avoid duplicating columns after merge
+    existing_data = _normalize_column_names(existing_data)
     
     # Ensure crash_date is datetime if it exists
     if "crash_date" in existing_data.columns:
