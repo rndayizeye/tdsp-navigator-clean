@@ -23,7 +23,7 @@ def create_pipeline(**kwargs) -> Pipeline:
                 ],
                 outputs=[
                     "nyc_crashes",
-                    "fetch_metadata",
+                    "fetch_metadata",  # Updated metadata with new watermark
                 ],
                 name="fetch_nyc_crashes_incremental",
                 tags=["data_ingestion", "api", "incremental"],

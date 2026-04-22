@@ -6,13 +6,21 @@ import logging
 from datetime import datetime
 from typing import Dict, Tuple, Any
 from sodapy import Socrata
+from kedro.config import OmegaConfigLoader
+from pathlib import Path
+
+conf_loader = OmegaConfigLoader(conf_source=str(Path.cwd() / "conf"))
+credentials = conf_loader["credentials"]
+app_token = credentials.get("socrata_app_token")
+
+app_token=app_token
 
 logger = logging.getLogger(__name__)
 
 
 def fetch_and_store_nyc_crashes(
     nyc_crashes: pd.DataFrame,
-    fetch_metadata: Dict,
+    metadata_raw: Dict,
     params: Dict,
 ) -> Tuple[pd.DataFrame, Dict]:
     """
@@ -20,7 +28,7 @@ def fetch_and_store_nyc_crashes(
     
     Args:
         nyc_crashes: Historical crash data (may be empty on first run)
-        fetch_metadata: Tracking metadata with 'last_update' watermark
+        metadata_raw: Tracking metadata with 'last_update' watermark
         params: Configuration parameters from nyc_crashes.yml
         
     Returns:
@@ -41,7 +49,7 @@ def fetch_and_store_nyc_crashes(
     domain = params["socrata"]["domain"]
     # Normalize inputs
     existing_data = _normalize_existing_data(nyc_crashes)
-    metadata = _normalize_metadata(fetch_metadata)
+    metadata = _normalize_metadata(metadata_raw)
     
     # Determine watermark
     start_date = metadata.get("last_update", params["initial_date"])
@@ -259,4 +267,28 @@ def _normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
         "vehicle_type_code2": "vehicle_type_code_2",
     }
     df = df.rename(columns=rename_map)
+    if "zip_code" in df.columns:
+        df["zip_code"] = df["zip_code"].astype(str).replace("nan", None)
+
+    for col in ["latitude", "longitude"]:
+        if col in df.columns:df[col] = pd.to_numeric(df[col], errors="coerce")
+    # Drop location column — it's a dict from API, string from CSV, redundant either way
+    if "location" in df.columns:
+        df = df.drop(columns=["location"])
+    
+    # Cast all count/numeric columns that come in as strings from CSV
+    numeric_cols = [
+        "collision_id",
+        "number_of_persons_injured",
+        "number_of_persons_killed",
+        "number_of_pedestrians_injured",
+        "number_of_pedestrians_killed",
+        "number_of_cyclist_injured",
+        "number_of_cyclist_killed",
+        "number_of_motorist_injured",
+        "number_of_motorist_killed",
+    ]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
     return df
