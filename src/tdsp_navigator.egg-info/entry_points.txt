@@ -1,0 +1,2 @@
+[console_scripts]
+tdsp-navigator = tdsp_navigator.__main__:main

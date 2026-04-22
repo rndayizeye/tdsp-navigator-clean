@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+data/01_raw/*.csv
+data/01_raw/*.parquet
+data/02_primary/*.parquet
+data/*/
+!data/*/.gitkeep
+logs/
+.kedro/
+.DS_Store
+.env
+*.log

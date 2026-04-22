@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  nyc-crashes:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nyc-crashes-pipeline
+    volumes:
+      # Mount data directory for persistence
+      - ./data:/app/data
+      # Mount notebooks for development
+      - ./notebooks:/app/notebooks
+      # Mount conf for easy config changes
+      - ./conf:/app/conf
+    ports:
+      - "8080:8080"  # Marimo
+      - "4141:4141"  # Kedro Viz
+    environment:
+      - KEDRO_ENV=local
+    command: marimo edit --host 0.0.0.0 -p 8080 --no-token
+    restart: unless-stopped
+
+  # Optional: Separate service for running pipelines
+  pipeline-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nyc-crashes-runner
+    volumes:
+      - ./data:/app/data
+      - ./conf:/app/conf
+    environment:
+      - KEDRO_ENV=local
+    command: kedro run
+    profiles:
+      - pipeline  # Only start with: docker-compose --profile pipeline up

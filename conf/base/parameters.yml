@@ -1,0 +1,28 @@
+# conf/base/parameters.yml
+
+#socrata_dataset_id: "h9gi-nx95" # NYC Motor Vehicle Collisions
+#socrata_base_url: "data.cityofnewyork.us"
+#socrata_query_limit: 5000000 # Limit for each query to Socrata API
+#chunk_size: 50000 # Number of records to convert to Polars DataFrame batch for DB insertion
+
+
+# Initial start date for the first run if no last_update_date is found
+# This must be in YYYY-MM-DD format
+#The Citywide traffic safety initiative, Vision Zero started in the year 2014, therefore we can set the initial fetch start date to 2014-01-01
+#initial_fetch_start_date_str: "2014-01-01" # Adjust as needed for your first fetch
+
+#nyc_crashes:
+  #api_endpoint: "https://data.cityofnewyork.us/resource/h9gi-nx95.json"
+  #date_column: "crash_date"
+
+
+ 
+nyc_crashes:
+  initial_date: "2014-01-01"
+  socrata:  
+    dataset_id: "h9gi-nx95"
+    domain: "data.cityofnewyork.us"
+    app_token: "MJoLUJskvtR1AsFMHSIGUuUXU"
+  incremental:
+    date_column: "crash_date"
+      # Or your preferred start date

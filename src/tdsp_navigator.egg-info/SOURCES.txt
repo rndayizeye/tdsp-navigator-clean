@@ -1,0 +1,17 @@
+README.md
+pyproject.toml
+src/tdsp_navigator/__init__.py
+src/tdsp_navigator/__main__.py
+src/tdsp_navigator/pipeline_registry.py
+src/tdsp_navigator/settings.py
+src/tdsp_navigator.egg-info/PKG-INFO
+src/tdsp_navigator.egg-info/SOURCES.txt
+src/tdsp_navigator.egg-info/dependency_links.txt
+src/tdsp_navigator.egg-info/entry_points.txt
+src/tdsp_navigator.egg-info/requires.txt
+src/tdsp_navigator.egg-info/top_level.txt
+src/tdsp_navigator/pipelines/__init__.py
+src/tdsp_navigator/pipelines/data_ingestion/__init__.py
+src/tdsp_navigator/pipelines/data_ingestion/nodes.py
+src/tdsp_navigator/pipelines/data_ingestion/pipeline.py
+tests/test_run.py

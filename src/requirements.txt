@@ -1,0 +1,27 @@
+ipython>=8.10
+jupyterlab>=3.0
+kedro~=0.19.14
+notebook
+marimo[recommended]
+
+pyarrow
+shapely
+matplotlib
+seaborn
+scikit-learn
+# Added for 'Location Inequality' indices
+inequality
+# Data Science & Kedro
+pandas>=2.0.0
+kedro-datasets[pandas,geopandas,parquet,json]>=1.0.0
+
+# Geospatial Stack
+geopandas
+shapely
+pyogrio  # Faster engine for reading/writing spatial files
+pyproj  
+sodapy # For CRS transformations
+kedro>=0.18.0
+pandas>=1.5.0
+pyarrow>=10.0.0
+sodapy>=2.2.0
