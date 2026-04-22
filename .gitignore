@@ -11,3 +11,6 @@ logs/
 .env
 *.log
 secrets.txt
+conf/local/
+stats.json
+data/02_primary/*.parquet
