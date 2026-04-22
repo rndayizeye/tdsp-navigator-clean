@@ -1,27 +1,33 @@
-# Raw input data
+# ── INPUTS ──────────────────────────────────────────────────────────────────
+
+# Raw crash data from Socrata (input to pipeline)
 nyc_crashes_raw:
   type: pandas.CSVDataset
   filepath: data/01_raw/nyc_crashes.csv
   load_args:
     low_memory: False
 
-# Persistent state for incremental loading
-last_run_metadata:
-  type: json.JSONDataset
-  filepath: data/01_raw/last_run_metadata.json
-
-# Geospatial data for mapping
-census_tracts_geometry:
-  type: geopandas.GeoJSONDataset
-  filepath: data/01_raw/census_tracts.geojson
-
-# Processed output (The one likely causing the duplicate)
-collisions_processed:
-  type: pandas.ParquetDataset
-  filepath: data/02_intermediate/collisions_processed.parquet
-  save_args:
-    index: False
-
+# Watermark tracker (input to pipeline)
 metadata_raw:
   type: json.JSONDataset
   filepath: data/01_raw/metadata.json
+
+# Geospatial data (available for analysis, unused by pipeline currently)
+#census_tracts_geometry:
+ # type: geopandas.GeoJSONDataset
+ # filepath: data/01_raw/census_tracts.geojson
+
+
+# ── OUTPUTS ─────────────────────────────────────────────────────────────────
+
+# Processed crash data (output of pipeline)
+nyc_crashes:
+  type: pandas.ParquetDataset
+  filepath: data/02_primary/nyc_crashes.parquet
+  save_args:
+    index: False
+
+# Updated watermark after each run (output of pipeline)
+fetch_metadata:
+  type: json.JSONDataset
+  filepath: data/01_raw/fetch_metadata.json

@@ -10,3 +10,4 @@ logs/
 .DS_Store
 .env
 *.log
+secrets.txt

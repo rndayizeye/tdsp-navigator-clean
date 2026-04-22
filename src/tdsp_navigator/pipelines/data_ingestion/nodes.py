@@ -125,7 +125,7 @@ def _fetch_from_socrata(
     Returns:
         DataFrame with new records, or empty DataFrame if fetch fails/no data
     """
-    client = Socrata(base_url, None)
+    client = Socrata(base_url, app_token)
     
     try:
         logger.info(f"Querying Socrata API: {dataset_id}")
