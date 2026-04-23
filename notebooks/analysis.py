@@ -13,18 +13,16 @@ def _():
     from plotly.subplots import make_subplots
     import warnings
     warnings.filterwarnings("ignore")
-    return go, make_subplots, mo, pd, px, warnings
+    return go, make_subplots, mo, pd, px
 
 
 @app.cell
 def _(mo):
-    mo.md(
-        """
-        # NYC Crash Data — Vision Zero EDA
-        **Dataset**: NYC Motor Vehicle Collisions (2014–present)  
-        **Goal**: Identify when, where, and why fatal and injury crashes occur to inform Vision Zero policy.
-        """
-    )
+    mo.md("""
+    # NYC Crash Data — Vision Zero EDA
+    **Dataset**: NYC Motor Vehicle Collisions (2014–present)
+    **Goal**: Identify when, where, and why fatal and injury crashes occur to inform Vision Zero policy.
+    """)
     return
 
 
@@ -55,7 +53,7 @@ def _(pd):
 
     print(f"Loaded {len(df):,} records from {df['crash_date'].min().date()} to {df['crash_date'].max().date()}")
     df.head(3)
-    return df
+    return (df,)
 
 
 @app.cell
@@ -82,24 +80,14 @@ def _(df, mo):
     | Cyclists killed | {cyc_killed:,} |
     | Motorists killed | {mot_killed:,} |
     """)
-    return (
-        cyc_killed,
-        mot_killed,
-        ped_killed,
-        pct_injury,
-        total,
-        total_injured,
-        total_killed,
-    )
+    return
 
-
-# ─────────────────────────────────────────────────────────────
-# SECTION 1: TEMPORAL PATTERNS
-# ─────────────────────────────────────────────────────────────
 
 @app.cell
 def _(mo):
-    mo.md("## 1 · Temporal Patterns — When Do Crashes Happen?")
+    mo.md("""
+    ## 1 · Temporal Patterns — When Do Crashes Happen?
+    """)
     return
 
 
@@ -121,7 +109,7 @@ def _(df, px):
     )
     fig_hour.update_layout(coloraxis_showscale=False, height=350)
     fig_hour
-    return fig_hour, hourly
+    return
 
 
 @app.cell
@@ -142,11 +130,11 @@ def _(df, px):
     fig_fatal_hour.update_traces(line_color="#d62728", marker_color="#d62728")
     fig_fatal_hour.update_layout(height=350)
     fig_fatal_hour
-    return fig_fatal_hour, hourly_fatal
+    return
 
 
 @app.cell
-def _(df, pd, px):
+def _(df, px):
     # Day of week pattern
     dow_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     dow = df.groupby("day_of_week").agg(
@@ -165,7 +153,7 @@ def _(df, pd, px):
     )
     fig_dow.update_layout(height=350, coloraxis_colorbar_title="Fatalities<br>per 1k crashes")
     fig_dow
-    return dow, dow_order, fig_dow
+    return
 
 
 @app.cell
@@ -187,16 +175,14 @@ def _(df, px):
     )
     fig_annual.update_layout(height=380)
     fig_annual
-    return annual, fig_annual
+    return
 
-
-# ─────────────────────────────────────────────────────────────
-# SECTION 2: GEOSPATIAL PATTERNS
-# ─────────────────────────────────────────────────────────────
 
 @app.cell
 def _(mo):
-    mo.md("## 2 · Geospatial Patterns — Where Do Crashes Happen?")
+    mo.md("""
+    ## 2 · Geospatial Patterns — Where Do Crashes Happen?
+    """)
     return
 
 
@@ -222,11 +208,11 @@ def _(df, px):
     )
     fig_borough.update_layout(height=380, coloraxis_colorbar_title="Fatalities<br>per 1k crashes")
     fig_borough
-    return borough, borough_df, fig_borough
+    return (borough,)
 
 
 @app.cell
-def _(borough, make_subplots, go):
+def _(borough, go, make_subplots):
     # Vulnerable road users by borough
     fig_vru = make_subplots(rows=1, cols=2, subplot_titles=["Pedestrians Killed", "Cyclists Killed"])
     fig_vru.add_trace(
@@ -243,7 +229,7 @@ def _(borough, make_subplots, go):
         showlegend=False,
     )
     fig_vru
-    return fig_vru,
+    return
 
 
 @app.cell
@@ -271,16 +257,14 @@ def _(df, px):
     )
     fig_map.update_layout(coloraxis_colorbar_title="People<br>Killed")
     fig_map
-    return fatal_map, fig_map
+    return
 
-
-# ─────────────────────────────────────────────────────────────
-# SECTION 3: SEVERITY ANALYSIS
-# ─────────────────────────────────────────────────────────────
 
 @app.cell
 def _(mo):
-    mo.md("## 3 · Severity Analysis — What Factors Predict Fatalities?")
+    mo.md("""
+    ## 3 · Severity Analysis — What Factors Predict Fatalities?
+    """)
     return
 
 
@@ -314,7 +298,7 @@ def _(df, px):
     )
     fig_factors.update_layout(height=420, yaxis={"categoryorder": "total ascending"}, coloraxis_showscale=False)
     fig_factors
-    return all_factors, fatal_factors, fig_factors
+    return
 
 
 @app.cell
@@ -340,7 +324,7 @@ def _(df, px):
     )
     fig_vru_hour.update_layout(height=380)
     fig_vru_hour
-    return fig_vru_hour, ped_hourly
+    return
 
 
 @app.cell
@@ -374,7 +358,7 @@ def _(df, pd, px):
     )
     fig_vz.update_layout(height=400)
     fig_vz
-    return current_year, fig_vz, vz
+    return
 
 
 @app.cell

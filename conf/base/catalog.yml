@@ -10,7 +10,7 @@ nyc_crashes_raw:
 # Watermark tracker (input to pipeline)
 metadata_raw:
   type: json.JSONDataset
-  filepath: data/01_raw/metadata.json
+  filepath: data/01_raw/fetch_metadata.json 
 
 # Geospatial data (available for analysis, unused by pipeline currently)
 #census_tracts_geometry:
