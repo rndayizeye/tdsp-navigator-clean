@@ -14,3 +14,4 @@ secrets.txt
 conf/local/
 stats.json
 data/02_primary/*.parquet
+conf/local/credentials.yml
