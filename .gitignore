@@ -15,3 +15,4 @@ conf/local/
 stats.json
 data/02_primary/*.parquet
 conf/local/credentials.yml
+src/tdsp_navigator/pipelines/data_ingestion/secrets.txt
