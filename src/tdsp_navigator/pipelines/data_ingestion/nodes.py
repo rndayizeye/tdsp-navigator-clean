@@ -406,21 +406,20 @@ def preprocess_census_geometry(df: pd.DataFrame) -> gpd.GeoDataFrame:
     """takes the raw acs5 census tract data, add merge it with polygon data
     and convert to a GeoDataFrame"""
     # Assuming df has 'GEO_ID' and 'geometry' columns
-    if "GEO_ID" not in df.columns or "geometry" not in df.columns:
-        logger.error(f"Input DataFrame must contain 'GEO_ID' and 'geometry' columns. Available columns: {list(df.columns)}")
+    if "geo_id" not in df.columns:
+        logger.error(f"Input DataFrame must contain 'geo_id' columns. Available columns: {list(df.columns)}")
         raise ValueError("Missing required columns in input DataFrame")
 
+    # Fetch geometry data for census tracts
+    geometry_df = _fetch_census_geometry()
     # Merge the geometry data with the main DataFrame
-    gdf = _merge_census_geometry(df, _fetch_census_geometry())
-
-    # Create GeoDataFrame
-    gdp = gpd.GeoDataFrame(df, geometry="geometry")
+    gdf = _merge_census_geometry(df, geometry_df)
 
     logger.info(
-        f"Preprocessed census geometry data into GeoDataFrame with {len(gdp)} records"
+        f"Preprocessed census geometry data into GeoDataFrame with {len(gdf)} records"
     )
 
-    return gdp
+    return gdf
 
 
 # Helper function to fetch geometry data for census tracts
@@ -453,20 +452,18 @@ def _fetch_census_geometry() -> gpd.GeoDataFrame:
 
 # helper to merge census geometry with main census data
 def _merge_census_geometry(
-    census_df: pd.DataFrame, geometry_df: pd.DataFrame
+    census_df: pd.DataFrame, geometry_df: gpd.GeoDataFrame
 ) -> gpd.GeoDataFrame:
     """Merge the census data with geometry data on GEO_ID and return a GeoDataFrame."""
-    if "GEO_ID" not in census_df.columns or "GEO_ID" not in geometry_df.columns:
+    if "geo_id" not in census_df.columns or "GEO_ID" not in geometry_df.columns:
         logger.error("Both DataFrames must contain 'GEO_ID' column for merging")
         raise ValueError("Missing 'GEO_ID' column in one of the DataFrames")
 
-    merged_df = census_df.merge(geometry_df, on="GEO_ID", how="left")
+    merged_gdf = geometry_df.merge(census_df, left_on="GEO_ID", right_on="geo_id", how="left")
 
-    # Convert to GeoDataFrame
-    gdf = gpd.GeoDataFrame(merged_df, geometry="geometry")
 
     logger.info(
-        f"Merged census data with geometry. Resulting GeoDataFrame has {len(gdf)} records."
+        f"Merged census data with geometry. Resulting GeoDataFrame has {len(merged_gdf)} records.crs: {merged_gdf.crs}"
     )
 
-    return gdf
+    return merged_gdf

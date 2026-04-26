@@ -1,1 +1,1 @@
-{"nyc_crashes_raw": {"rows": 731696, "columns": 29, "file_size": 146208402}, "nyc_crashes": {"rows": 2256591, "columns": 28, "file_size": 48739839}}
+{"nyc_census_raw": {"rows": 2327, "columns": 9, "file_size": 88782}, "nyc_crashes_raw": {"rows": 731696, "columns": 29, "file_size": 146208402}, "nyc_crashes": {"rows": 731696, "columns": 28, "file_size": 17561221}, "nyc_census_geodf": {"rows": 5411, "columns": 11, "file_size": 48378065}}
