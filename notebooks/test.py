@@ -44,13 +44,19 @@ def _(catalog):
 
 @app.cell
 def _(catalog):
-    nyc_crashes_raw = catalog.load(name="nyc_crashes_raw")
-    return (nyc_crashes_raw,)
+    nyc_crashes = catalog.load(name="nyc_crashes_raw")
+    return (nyc_crashes,)
 
 
 @app.cell
-def _(nyc_crashes_raw):
-    len(nyc_crashes_raw)
+def _(nyc_crashes):
+    len(nyc_crashes)
+    return
+
+
+@app.cell
+def _(catalog):
+    catalog.load("fetch_metadata")
     return
 
 

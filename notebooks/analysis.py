@@ -20,7 +20,7 @@ def _():
 def _(mo):
     mo.md("""
     # NYC Crash Data — Vision Zero EDA
-    **Dataset**: NYC Motor Vehicle Collisions (2014–present)
+    **Dataset**: NYC Motor Vehicle Collisions (2012–present)
     **Goal**: Identify when, where, and why fatal and injury crashes occur to inform Vision Zero policy.
     """)
     return
@@ -248,11 +248,11 @@ def _(df, px):
         color="number_of_persons_killed",
         size="number_of_persons_killed",
         hover_data=["crash_date", "borough", "on_street_name", "contributing_factor_vehicle_1"],
-        color_continuous_scale="Reds",
+        color_continuous_scale="YlOrRd",
         zoom=10,
         mapbox_style="carto-positron",
         title=f"Fatal Crash Locations ({len(fatal_map):,} crashes)",
-        opacity=0.8,
+        opacity=0.6,
         height=550,
     )
     fig_map.update_layout(coloraxis_colorbar_title="People<br>Killed")
