@@ -1,0 +1,59 @@
+# ============================================================================
+# Dockerfile.notebook — Marimo analysis environment
+# Mirrors: marimo_env conda environment
+# Modern Pydantic 2.x — do NOT add kedro-viz to this image.
+# ============================================================================
+
+# ── Stage 1: Builder ─────────────────────────────────────────────────────────
+FROM python:3.11-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ python3-dev \
+    libgdal-dev libproj-dev libgeos-dev \
+    libxml2-dev libxslt-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY src/requirements_analysis.txt .
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN pip install --upgrade pip && \
+    pip install -r requirements_analysis.txt
+
+# ── Stage 2: Runtime ─────────────────────────────────────────────────────────
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgdal-dev libproj-dev libgeos-dev \
+    libxml2 libxslt1.1 curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -d /home/marimo -s /bin/bash marimo
+
+COPY --from=builder /opt/venv /opt/venv
+
+# Only mount notebooks and data — no pipeline code needed here
+COPY --chown=marimo:marimo notebooks/ /app/notebooks/
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:8080 || exit 1
+
+USER marimo
+
+EXPOSE 8080
+
+CMD ["marimo", "edit", "--host", "0.0.0.0", "-p", "8080", "--no-token"]

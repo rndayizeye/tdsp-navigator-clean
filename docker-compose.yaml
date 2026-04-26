@@ -1,37 +1,42 @@
-version: '3.8'
-
 services:
-  nyc-crashes:
+
+  # ── Kedro Viz (pipeline visualization) ──────────────────────────────────────
+  pipeline:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.pipeline
+    image: tdsp-pipeline
     container_name: nyc-crashes-pipeline
     volumes:
-      # Mount data directory for persistence
-      - ./data:/app/data
-      # Mount notebooks for development
-      - ./notebooks:/app/notebooks
-      # Mount conf for easy config changes
-      - ./conf:/app/conf
+      - ./data:/app/data          # persist ingested data
+      - ./conf:/app/conf          # config changes without rebuild
+      # NOTE: conf/local/ (credentials) should be mounted separately
+      # or passed as environment variables — never baked into the image
     ports:
-      - "8080:8080"  # Marimo
-      - "4141:4141"  # Kedro Viz
-    environment:
-      - KEDRO_ENV=local
-    command: marimo edit --host 0.0.0.0 -p 8080 --no-token
+      - "4141:4141"               # Kedro Viz
     restart: unless-stopped
 
-  # Optional: Separate service for running pipelines
-  pipeline-runner:
+  # ── Marimo Notebook (analysis) ───────────────────────────────────────────────
+  notebook:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.notebook
+    image: tdsp-notebook
+    container_name: nyc-crashes-notebook
+    volumes:
+      - ./data:/app/data          # read processed parquet files
+      - ./notebooks:/app/notebooks
+    ports:
+      - "8080:8080"               # Marimo
+    restart: unless-stopped
+
+  # ── Pipeline Runner (on-demand) ──────────────────────────────────────────────
+  pipeline-runner:
+    image: tdsp-pipeline          # reuse already-built pipeline image
     container_name: nyc-crashes-runner
     volumes:
       - ./data:/app/data
       - ./conf:/app/conf
-    environment:
-      - KEDRO_ENV=local
     command: kedro run
     profiles:
-      - pipeline  # Only start with: docker-compose --profile pipeline up
+      - pipeline                  # run with: docker compose --profile pipeline up

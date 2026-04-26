@@ -252,11 +252,17 @@ def _(df, px):
         zoom=10,
         mapbox_style="carto-positron",
         title=f"Fatal Crash Locations ({len(fatal_map):,} crashes)",
-        opacity=0.6,
+        opacity=0.8,
         height=550,
     )
     fig_map.update_layout(coloraxis_colorbar_title="People<br>Killed")
     fig_map
+    return (fatal_map,)
+
+
+@app.cell
+def _(fatal_map):
+    fatal_map.head()
     return
 
 
@@ -265,6 +271,12 @@ def _(mo):
     mo.md("""
     ## 3 · Severity Analysis — What Factors Predict Fatalities?
     """)
+    return
+
+
+@app.cell
+def _(df):
+    df.head(5)
     return
 
 

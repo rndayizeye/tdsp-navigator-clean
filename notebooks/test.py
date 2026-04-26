@@ -7,6 +7,50 @@ app = marimo.App(width="medium")
 @app.cell
 def _():
     #did you save?
+    import marimo as mo
+    from kedro.framework.session import KedroSession
+    from kedro.framework.startup import bootstrap_project
+    from pathlib import Path
+
+    return KedroSession, Path, bootstrap_project
+
+
+@app.cell
+def _():
+    import kedro
+    print(kedro.__version__)
+    return
+
+
+@app.cell
+def _(KedroSession, Path, bootstrap_project):
+    # Bootstrap the project root
+    project_path = Path.cwd()
+    bootstrap_project(project_path=project_path)
+
+    # Create a session
+
+    session = KedroSession.create()
+    context = session.load_context()
+    catalog = context.catalog
+    return (catalog,)
+
+
+@app.cell
+def _(catalog):
+    catalog.list()
+    return
+
+
+@app.cell
+def _(catalog):
+    nyc_crashes_raw = catalog.load(name="nyc_crashes_raw")
+    return (nyc_crashes_raw,)
+
+
+@app.cell
+def _(nyc_crashes_raw):
+    len(nyc_crashes_raw)
     return
 
 

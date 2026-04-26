@@ -1,0 +1,65 @@
+# ============================================================================
+# Dockerfile.pipeline — Kedro pipeline + Kedro Viz
+# Mirrors: tdsp_env conda environment
+# WARNING: Pydantic 1.x required. Do not upgrade kedro-viz or pydantic.
+# ============================================================================
+
+# ── Stage 1: Builder ─────────────────────────────────────────────────────────
+FROM python:3.11-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ python3-dev \
+    libgdal-dev libproj-dev libgeos-dev \
+    libxml2-dev libxslt-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY src/requirements_pipeline.txt .
+COPY pyproject.toml .
+COPY src/ ./src/
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN pip install --upgrade pip && \
+    pip install -r requirements_pipeline.txt && \
+    pip install --no-deps -e .
+
+# ── Stage 2: Runtime ─────────────────────────────────────────────────────────
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src \
+    PATH="/opt/venv/bin:$PATH" \
+    KEDRO_ENV=local
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgdal-dev libproj-dev libgeos-dev \
+    libxml2 libxslt1.1 curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -d /home/kedro -s /bin/bash kedro
+
+COPY --from=builder /opt/venv /opt/venv
+
+# conf/local/ is excluded via .dockerignore — credentials must be
+# passed as environment variables or mounted at runtime
+COPY --chown=kedro:kedro . /app/
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:4141 || exit 1
+
+USER kedro
+
+EXPOSE 4141
+
+CMD ["kedro", "viz", "--host", "0.0.0.0", "-p", "4141"]

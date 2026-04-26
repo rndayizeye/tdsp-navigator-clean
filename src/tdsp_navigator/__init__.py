@@ -1,4 +1,3 @@
-"""tdsp_navigator
-"""
+"""tdsp_navigator"""
 
 __version__ = "0.1"

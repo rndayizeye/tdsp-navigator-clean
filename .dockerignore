@@ -56,3 +56,9 @@ docker-compose.yml
 # OS
 .DS_Store
 Thumbs.db
+
+conf/local/
+data/
+logs/
+.git/
+...

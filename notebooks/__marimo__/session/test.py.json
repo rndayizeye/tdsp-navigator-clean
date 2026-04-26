@@ -7,7 +7,7 @@
   "cells": [
     {
       "id": "Hbol",
-      "code_hash": null,
+      "code_hash": "461974e7bfdbd024b3ac3f5b38765fcb",
       "outputs": [
         {
           "type": "data",
@@ -16,6 +16,71 @@
           }
         }
       ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[04/25/26 16:11:57] INFO     Using 'conf/logging.yml' as logging configuration. You can change this by setting the   __init__.py:275\n                             KEDRO_LOGGING_CONFIG environment variable accordingly.                                                 \n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "MJUe",
+      "code_hash": "8a206e4bb7ecaeb0afc0edc86f77e1e0",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1.3.1\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "vblA",
+      "code_hash": "043a8ad048a3b7ade65217557a43282d",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "Your Kedro project version 0.19.14 does not match Kedro package version 1.3.1 you are running. Make sure to update your project template. See https://github.com/kedro-org/kedro/blob/main/RELEASE.md for how to migrate your Kedro project.",
+          "traceback": null
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "<span class=\"codehilite\"><div class=\"highlight\"><pre><span></span><span class=\"gt\">Traceback (most recent call last):</span>\n  File <span class=\"nb\">&quot;/var/folders/nj/l_35v6rd7yb4qtfyz13w0k_00000gn/T/marimo_31732/__marimo__cell_vblA_.py&quot;</span>, line <span class=\"m\">3</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"n\">bootstrap_project</span><span class=\"p\">(</span><span class=\"n\">project_path</span><span class=\"o\">=</span><span class=\"n\">project_path</span><span class=\"p\">)</span>\n  File <span class=\"nb\">&quot;/opt/anaconda3/envs/marimo_env/lib/python3.11/site-packages/kedro/framework/startup.py&quot;</span>, line <span class=\"m\">155</span>, in <span class=\"n\">bootstrap_project</span>\n<span class=\"w\">    </span><span class=\"n\">metadata</span> <span class=\"o\">=</span> <span class=\"n\">_get_project_metadata</span><span class=\"p\">(</span><span class=\"n\">project_path</span><span class=\"p\">)</span>\n<span class=\"w\">               </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/opt/anaconda3/envs/marimo_env/lib/python3.11/site-packages/kedro/framework/startup.py&quot;</span>, line <span class=\"m\">93</span>, in <span class=\"n\">_get_project_metadata</span>\n<span class=\"w\">    </span><span class=\"k\">raise</span> <span class=\"ne\">ValueError</span><span class=\"p\">(</span><span class=\"n\">_version_mismatch_error</span><span class=\"p\">(</span><span class=\"n\">metadata_dict</span><span class=\"p\">[</span><span class=\"s2\">&quot;kedro_init_version&quot;</span><span class=\"p\">]))</span>\n<span class=\"gr\">ValueError</span>: <span class=\"n\">Your Kedro project version 0.19.14 does not match Kedro package version 1.3.1 you are running. Make sure to update your project template. See https://github.com/kedro-org/kedro/blob/main/RELEASE.md for how to migrate your Kedro project.</span>\n</pre></div>\n</span>",
+          "mimetype": "application/vnd.marimo+traceback"
+        }
+      ]
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "9593dde5ca52eea2d13e9dc5e939b629",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "94a0faa150d8b1e92cb810b44fbce955",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "11f325770eb8d89b270e223ffbf7010e",
+      "outputs": [],
       "console": []
     }
   ]

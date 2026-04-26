@@ -1,0 +1,46 @@
+# ── Kedro Core ───────────────────────────────────────────────────────────────
+kedro==0.19.15
+kedro-datasets[pandas,geopandas,parquet,json]==3.0.1
+kedro-telemetry==0.7.0
+
+# ── Kedro Viz Stability Pins (DO NOT UPGRADE) ────────────────────────────────
+# These are pinned per environment_stabilization_guide.md.
+# Upgrading any of these will break Kedro Viz.
+kedro-viz==6.7.0
+secure==0.3.0
+pydantic==1.10.26
+starlette==0.27.0
+fastapi==0.99.1
+strawberry-graphql==0.234.3
+graphql-core==3.2.8
+
+# ── Data Ingestion ───────────────────────────────────────────────────────────
+sodapy==2.2.0
+pandas==2.3.3
+pyarrow==24.0.0
+numpy==1.26.4
+
+# ── Geospatial ───────────────────────────────────────────────────────────────
+geopandas==0.14.4
+shapely==2.1.2
+pyogrio==0.12.1
+pyproj==3.7.2
+fiona==1.10.1
+
+# ── Pipeline Utilities ───────────────────────────────────────────────────────
+omegaconf==2.3.0
+toposort==1.10
+PyYAML==6.0.3
+fsspec==2023.12.2
+dynaconf==3.2.13
+rich==13.9.4
+pluggy==1.6.0
+
+# ── Testing ──────────────────────────────────────────────────────────────────
+pytest==9.0.3
+pytest-cov==7.1.0
+
+# ── Dev Utilities ────────────────────────────────────────────────────────────
+ipython==8.39.0
+jupyterlab==4.5.6
+requests==2.31.0

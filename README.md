@@ -1,49 +1,66 @@
-# TDSP Navigator - NYC Traffic Safety Analysis
+# TDSP Navigator — NYC Traffic Safety Analysis
 
-A production-ready Kedro pipeline for incremental ingestion and analysis of NYC Motor Vehicle Collision data from the Socrata Open Data API.
+A production-ready Kedro pipeline for incremental ingestion and analysis of NYC Motor Vehicle Collision data from the Socrata Open Data API, with a Vision Zero research focus.
 
 ## 🎯 Project Overview
 
 This project implements a robust ETL pipeline for NYC crash data with:
 - **Incremental loading** with watermark tracking
 - **Dual-environment architecture** to avoid dependency conflicts
-- **Production-ready** configuration with pinned dependencies
-- **Geospatial analysis** capabilities
+- **Dual-image Docker deployment** mirroring the two environments
+- **Clean 28-column schema** with consistent snake_case naming
+- **Vision Zero EDA notebook** in Marimo
+- **Secured credentials** via `conf/local/` (gitignored)
 
 ## 📊 Data Source
 
 - **Dataset**: [NYC Motor Vehicle Collisions - Crashes](https://data.cityofnewyork.us/Public-Safety/Motor-Vehicle-Collisions-Crashes/h9gi-nx95)
 - **Provider**: NYC Open Data (Socrata API)
-- **Coverage**: July 2012 - Present
+- **Coverage**: July 2014 - Present
 - **Update Frequency**: Daily
+- **Current Size**: ~1.95M records, 28 columns
 
 ## 🏗️ Architecture
 
 ### Dual-Environment Strategy
 
-The project uses two isolated environments to prevent dependency conflicts:
+The project uses two isolated environments to prevent dependency conflicts between Kedro Viz (requires Pydantic 1.x) and Marimo (requires Pydantic 2.x). These cannot coexist in the same environment.
 
 #### Environment A: `tdsp_env` (Pipeline & Production)
 - **Purpose**: Kedro pipelines, data ingestion, Kedro Viz
-- **Kedro Version**: 0.19.15 (LTS)
+- **Kedro Version**: 0.19.15
 - **Key Constraint**: Pydantic 1.x required by Kedro-Viz
+- **Requirements**: `src/requirements_pipeline.txt`
 
 #### Environment B: `marimo_env` (Analysis & EDA)
 - **Purpose**: Interactive notebooks, visualization, modeling
 - **Stack**: Modern Python (Pydantic 2.x, latest pandas, plotly)
+- **Requirements**: `src/requirements_analysis.txt`
 
 ### Data Layers
 
 ```
 data/
-├── 01_raw/              # API metadata, watermarks
-│   └── fetch_metadata.json
-├── 02_primary/          # Main datasets (versioned)
-│   └── nyc_crashes.parquet
-├── 03_model_input/      # Feature engineering outputs
-├── 04_model_output/     # Model predictions
-└── 06_reporting/        # Analysis outputs
+├── 01_raw/
+│   ├── nyc_crashes.csv          # Raw CSV input
+│   └── fetch_metadata.json      # Watermark tracker (input + output)
+├── 02_primary/
+│   └── nyc_crashes.parquet      # Processed output (28 columns, snake_case)
+├── 03_model_input/
+├── 04_model_output/
+└── 06_reporting/
 ```
+
+### Pipeline Flow
+
+```
+nyc_crashes_raw (CSV) ──┐
+                         ├──► fetch_and_store_nyc_crashes ──► nyc_crashes (parquet)
+metadata_raw (JSON)  ──┘                                  └──► fetch_metadata (JSON)
+params:nyc_crashes ──┘
+```
+
+The pipeline fetches only records newer than the watermark, normalizes column names to snake_case, resolves type conflicts between CSV and API sources, deduplicates by `collision_id`, and updates the watermark.
 
 ## 🚀 Quick Start
 
@@ -62,200 +79,217 @@ mkdir -p data/01_raw data/02_primary
 echo '{}' > data/01_raw/fetch_metadata.json
 ```
 
-### 2. Run Data Ingestion
+### 2. Configure Credentials
+
+Create `conf/local/credentials.yml` (this file is gitignored — never commit it):
+
+```yaml
+socrata_app_token: YOUR_APP_TOKEN_HERE
+socrata_api_key_id: YOUR_KEY_ID_HERE
+socrata_api_key_secret: YOUR_KEY_SECRET_HERE
+```
+
+Get a Socrata app token at: https://data.cityofnewyork.us/profile/edit/developer_settings
+
+### 3. Run Data Ingestion
 
 ```bash
-# Activate pipeline environment
 conda activate tdsp_env
-
-# Run the pipeline
 kedro run
 
-# Verify ingestion
+# Verify watermark updated
 cat data/01_raw/fetch_metadata.json | python -m json.tool
-ls -lh data/02_primary/nyc_crashes.parquet
+
+# Verify output
+python -c "import pandas as pd; df = pd.read_parquet('data/02_primary/nyc_crashes.parquet'); print(df.shape)"
 ```
 
-### 3. Visualize Pipeline
+### 4. Visualize Pipeline
 
 ```bash
-# Launch Kedro Viz
+conda activate tdsp_env
 kedro viz --host 0.0.0.0 -p 4141
-
-# Open browser to: http://localhost:4141
+# Open: http://localhost:4141
 ```
 
-### 4. Analyze Data
+### 5. Analyze Data
 
 ```bash
-# Switch to analysis environment
 conda activate marimo_env
-
-# Launch interactive notebook
 marimo edit notebooks/analysis.py
+# Open: http://localhost:2718
 ```
 
 ## 📋 Configuration
 
 ### API Configuration
 
-Edit `conf/base/parameters/nyc_crashes.yml`:
+`conf/base/parameters.yml`:
 
 ```yaml
-socrata:
-  base_url: "data.cityofnewyork.us"
-  dataset_id: "h9gi-nx95"
-  chunk_size: 50000
-  # Optional: Add app token for higher rate limits
-  # app_token: "YOUR_TOKEN_HERE"
-
-incremental:
-  initial_date: "2012-07-01T00:00:00"
+nyc_crashes:
+  initial_date: "2014-01-01"
+  socrata:
+    dataset_id: "h9gi-nx95"
+    domain: "data.cityofnewyork.us"
+  incremental:
+    date_column: "crash_date"
 ```
 
-### Get Socrata App Token (Optional)
+The `app_token` is loaded at runtime from `conf/local/credentials.yml` — it is never stored in `parameters.yml`.
 
-For higher API rate limits:
-1. Visit: https://data.cityofnewyork.us/profile/edit/developer_settings
-2. Create an app token
-3. Add to `conf/base/parameters/nyc_crashes.yml`
-
-## 🔧 Development
-
-### Project Structure
+## 🔧 Project Structure
 
 ```
 tdsp-navigator/
 ├── conf/
-│   └── base/
-│       ├── catalog.yml           # Data catalog definitions
-│       ├── parameters/
-│       │   └── nyc_crashes.yml   # API & pipeline config
-│       └── logging.yml
+│   ├── base/
+│   │   ├── catalog.yml                  # Data catalog
+│   │   ├── parameters.yml               # API & pipeline config (no secrets)
+│   │   └── logging.yml
+│   └── local/
+│       └── credentials.yml              # Secrets (gitignored)
 ├── src/
 │   └── tdsp_navigator/
 │       ├── pipelines/
 │       │   └── data_ingestion/
-│       │       ├── nodes.py      # Pipeline logic
-│       │       └── pipeline.py   # Pipeline definition
-│       └── pipeline_registry.py
-├── data/                         # Data layers (gitignored)
-├── notebooks/                    # Analysis notebooks
-├── environment_tdsp.yml          # Pipeline environment
-├── environment_marimo.yml        # Analysis environment
-└── pyproject.toml
+│       │       ├── nodes.py             # Pipeline logic + schema normalization
+│       │       └── pipeline.py          # Pipeline definition
+│       ├── requirements_pipeline.txt    # tdsp_env dependencies
+│       └── requirements_analysis.txt   # marimo_env dependencies
+├── notebooks/
+│   └── analysis.py                      # Vision Zero EDA (Marimo)
+├── tests/
+│   └── pipelines/
+│       └── data_ingestion/
+│           └── test_nodes.py            # Unit tests
+├── data/                                # Data layers (gitignored)
+├── Dockerfile.pipeline                  # Kedro + Kedro Viz image
+├── Dockerfile.notebook                  # Marimo analysis image
+└── docker-compose.yaml
 ```
 
-### Running Tests
+## 🐳 Docker Deployment
+
+The project uses two Docker images mirroring the dual-environment strategy.
+
+### Build
 
 ```bash
-conda activate tdsp_env
-pytest src/tests/
+docker compose build
 ```
 
-### Adding New Pipelines
+### Run Kedro Viz (pipeline image)
 
 ```bash
-kedro pipeline create <pipeline_name>
+docker compose up pipeline
+# Open: http://localhost:4141
 ```
+
+### Run Marimo notebook (analysis image)
+
+```bash
+docker compose up notebook
+# Open: http://localhost:8080
+```
+
+### Run pipeline (on-demand)
+
+```bash
+docker compose --profile pipeline up pipeline-runner
+```
+
+### Credential Handling in Docker
+
+`conf/local/` is excluded from the Docker image via `.dockerignore`. Mount credentials at runtime:
+
+```bash
+docker compose run -v $(pwd)/conf/local:/app/conf/local pipeline kedro run
+```
+
+## 📊 Data Schema
+
+The processed parquet output has 28 columns, all in snake_case:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `collision_id` | int64 | Unique crash identifier |
+| `crash_date` | datetime | Date of crash |
+| `crash_time` | string | Time of crash |
+| `borough` | string | NYC borough |
+| `zip_code` | string | ZIP code (kept as string) |
+| `latitude` | float64 | Crash latitude |
+| `longitude` | float64 | Crash longitude |
+| `on_street_name` | string | Primary street |
+| `cross_street_name` | string | Cross street |
+| `off_street_name` | string | Off-street location |
+| `number_of_persons_injured` | float64 | Total persons injured |
+| `number_of_persons_killed` | float64 | Total persons killed |
+| `number_of_pedestrians_injured` | float64 | Pedestrians injured |
+| `number_of_pedestrians_killed` | float64 | Pedestrians killed |
+| `number_of_cyclist_injured` | float64 | Cyclists injured |
+| `number_of_cyclist_killed` | float64 | Cyclists killed |
+| `number_of_motorist_injured` | float64 | Motorists injured |
+| `number_of_motorist_killed` | float64 | Motorists killed |
+| `contributing_factor_vehicle_1–5` | string | Contributing factors |
+| `vehicle_type_code_1–5` | string | Vehicle types |
+
+## 📈 Incremental Loading
+
+The pipeline uses watermark-based incremental loading via `data/01_raw/fetch_metadata.json`:
+
+```json
+{
+  "last_update": "2026-04-19T00:00:00",
+  "last_run_timestamp": "2026-04-22T21:09:50",
+  "records_added_this_run": 142,
+  "total_records_in_dataset": 1952040,
+  "date_range": {
+    "min": "2012-07-27T00:00:00",
+    "max": "2026-04-19T00:00:00"
+  }
+}
+```
+
+Each run only fetches records newer than `last_update`.
+
+## 🔬 Research Focus
+
+The Marimo notebook (`notebooks/analysis.py`) covers three areas with a Vision Zero policy lens:
+
+1. **Temporal patterns** — crashes by hour, day of week, and annual fatality trends since Vision Zero launched in 2014
+2. **Geospatial patterns** — borough-level fatality rates, vulnerable road user deaths, and an interactive fatal crash map
+3. **Severity analysis** — contributing factors in fatal crashes, fatality rates by road user type, and Vision Zero progress tracking
 
 ## ⚠️ Critical Notes
 
 ### Environment Stability
 
 **DO NOT** upgrade these packages in `tdsp_env`:
-- `secure==0.3.0` (newer versions break Kedro framework)
-- `pydantic<2.0` (Kedro-Viz requires 1.x)
-- `kedro-viz==6.7.0`
-- `strawberry-graphql<0.235.0`
+
+| Package | Pinned Version | Reason |
+|---------|---------------|--------|
+| `kedro-viz` | 6.7.0 | API compatibility |
+| `secure` | 0.3.0 | `AttributeError: 'Secure' object has no attribute 'framework'` |
+| `pydantic` | <2.0 | Kedro-Viz requires 1.x |
+| `starlette` | <0.28.0 | Kedro-Viz API compatibility |
+| `strawberry-graphql` | <0.235.0 | `GraphQL.__init__() got unexpected keyword argument 'graphiql'` |
 
 ### Troubleshooting
 
-#### Error: `'Secure' object has no attribute 'framework'`
+| Error | Fix |
+|-------|-----|
+| `'Secure' object has no attribute 'framework'` | `pip install secure==0.3.0` |
+| `GraphQL.__init__() got unexpected keyword argument 'graphiql'` | `pip install "strawberry-graphql<0.235.0"` |
+| `ModuleNotFoundError: No module named 'toposort'` | `pip install toposort` |
+| `UnsupportedInterpolationType: credentials` | Remove `app_token` from `parameters.yml` — load from credentials instead |
+
+### Running Tests
+
 ```bash
 conda activate tdsp_env
-pip uninstall secure
-pip install secure==0.3.0
-```
-
-#### Error: `GraphQL.__init__() got unexpected keyword argument 'graphiql'`
-```bash
-pip install "strawberry-graphql<0.235.0"
-```
-
-#### Verify Environment Integrity
-```bash
-conda activate tdsp_env
-python -c "import kedro; print(f'Kedro: {kedro.__version__}')"
-python -c "import pydantic; print(f'Pydantic: {pydantic.VERSION}')"
-python -c "import secure; print(f'Secure: {secure.__version__}')"
-```
-
-## 📊 Data Pipeline Details
-
-### Incremental Loading Strategy
-
-The pipeline uses watermark-based incremental loading:
-
-1. **Load Watermark**: Read last update timestamp from metadata
-2. **Fetch New Data**: Query Socrata API for records > watermark
-3. **Merge & Deduplicate**: Combine with existing data, remove duplicates
-4. **Update Watermark**: Save new max timestamp to metadata
-
-### Node Implementation
-
-Key nodes in `src/tdsp_navigator/pipelines/data_ingestion/nodes.py`:
-- `fetch_and_store_nyc_crashes`: Main orchestration
-- `_fetch_from_socrata`: API interaction with retry logic
-- `_merge_and_deduplicate`: Data consolidation
-- `_build_metadata`: Watermark management
-
-## 📈 Usage Examples
-
-### Check Last Ingestion
-
-```bash
-cat data/01_raw/fetch_metadata.json | python -m json.tool
-```
-
-Example output:
-```json
-{
-  "last_update": "2026-04-21T18:30:45",
-  "last_run_timestamp": "2026-04-21T19:00:12.345678",
-  "records_added_this_run": 1523,
-  "total_records_in_dataset": 2089456,
-  "date_range": {
-    "min": "2012-07-01T00:00:00",
-    "max": "2026-04-21T18:30:45"
-  }
-}
-```
-
-### Run Specific Node
-
-```bash
-kedro run --node=fetch_nyc_crashes_incremental
-```
-
-### Run with Different Environment
-
-```bash
-kedro run --env=production
-```
-
-## 🐳 Docker Deployment
-
-Build production image:
-
-```bash
-docker build -f Dockerfile.production -t tdsp-navigator:latest .
-```
-
-Run pipeline:
-
-```bash
-docker run -v $(pwd)/data:/app/data tdsp-navigator:latest
+pip install pytest-cov
+pytest tests/pipelines/data_ingestion/test_nodes.py -v
 ```
 
 ## 📚 Additional Resources
@@ -264,29 +298,7 @@ docker run -v $(pwd)/data:/app/data tdsp-navigator:latest
 - [NYC Open Data Portal](https://opendata.cityofnewyork.us/)
 - [Socrata API Docs](https://dev.socrata.com/)
 - [Marimo Documentation](https://docs.marimo.io/)
-
-## 🤝 Contributing
-
-1. Create a feature branch: `git checkout -b feature/amazing-feature`
-2. Commit changes: `git commit -m 'Add amazing feature'`
-3. Push to branch: `git push origin feature/amazing-feature`
-4. Open a Pull Request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 👥 Authors
-
-- **Remyn Dayizeye** - Initial work - [@rndayizeye](https://github.com/rndayizeye)
-
-## 🙏 Acknowledgments
-
-- NYC Open Data team for maintaining the collision dataset
-- Kedro community for the excellent framework
-- Lessons learned documented in `environment_stabilization_guide.md`
+- [Vision Zero NYC](https://www.nyc.gov/content/visionzero/pages/)
 
 ## 📝 Project Status
 
@@ -294,6 +306,14 @@ MIT License - see LICENSE file for details
 **Last Updated**: April 2026  
 **Kedro Version**: 0.19.15  
 **Python Version**: 3.11
+
+## 👥 Authors
+
+- **Remyn Dayizeye** - [@rndayizeye](https://github.com/rndayizeye)
+
+## 📄 License
+
+MIT License - see LICENSE file for details
 
 ---
 

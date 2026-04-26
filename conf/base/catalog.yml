@@ -12,22 +12,46 @@ metadata_raw:
   type: json.JSONDataset
   filepath: data/01_raw/fetch_metadata.json 
 
-# Geospatial data (available for analysis, unused by pipeline currently)
-#census_tracts_geometry:
- # type: geopandas.GeoJSONDataset
- # filepath: data/01_raw/census_tracts.geojson
+# Raw census tracts data from Census API (input to pipeline)
+census_tracts_raw:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/census_tracts.csv
+  load_args:
+    low_memory: False
+
+#Geospatial data (input to pipeline)
+census_tracts_geometry_raw:
+ type: geopandas.GeoJSONDataset
+ filepath: data/01_raw/census_tracts.geojson
 
 
 # ── OUTPUTS ─────────────────────────────────────────────────────────────────
+
+# catalog.yml
+
+# Output of your existing census API node — just a parquet on disk
+# For your census API output (GeoJSON)
+nyc_census_raw:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/nyc_census_raw.parquet
+
+
+# For your final merged GeoDataFrame
+nyc_census_geodf:
+  type: geopandas.GeoJSONDataset
+  filepath: data/02_intermediate/nyc_census_geodf.geojson
+  
 
 # Processed crash data (output of pipeline)
 nyc_crashes:
   type: pandas.ParquetDataset
   filepath: data/02_primary/nyc_crashes.parquet
-  save_args:
-    index: False
+
 
 # Updated watermark after each run (output of pipeline)
 fetch_metadata:
   type: json.JSONDataset
   filepath: data/01_raw/fetch_metadata.json
+
+
+

@@ -11,16 +11,13 @@ WORKDIR /build
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    python3-dev \
     libgdal-dev \
     libproj-dev \
     libgeos-dev \
-    libxml2-dev \
-    libxslt-dev \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+    libxml2 \
+    libxslt1.1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Copy requirements
 COPY src/requirements.txt /build/requirements.txt
@@ -50,13 +47,14 @@ WORKDIR /app
 
 # Install only runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgdal32 \
-    libproj25 \
-    libgeos-c1v5 \
+    libgdal-dev \
+    libproj-dev \
+    libgeos-dev \
     libxml2 \
     libxslt1.1 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
+
 
 # Create user
 RUN useradd -m -d /home/kedro -s /bin/bash kedro
