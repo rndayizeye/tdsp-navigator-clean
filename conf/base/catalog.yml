@@ -2,25 +2,17 @@
 
 # Raw crash data from Socrata (input to pipeline)
 nyc_crashes_raw:
-  type: pandas.CSVDataset
-  filepath: data/01_raw/nyc_crashes.csv
-  load_args:
-    low_memory: False
+  type: pandas.ParquetDataset
+  filepath: data/02_primary/nyc_crashes.parquet  
+  
 
 # Watermark tracker (input to pipeline)
 metadata_raw:
   type: json.JSONDataset
   filepath: data/01_raw/fetch_metadata.json 
 
-# Raw census tracts data from Census API (input to pipeline)
-census_tracts_raw:
-  type: pandas.CSVDataset
-  filepath: data/01_raw/census_tracts.csv
-  load_args:
-    low_memory: False
-
 #Geospatial data (input to pipeline)
-census_tracts_geometry_raw:
+nyc_census_geometry_raw:
  type: geopandas.GeoJSONDataset
  filepath: data/01_raw/census_tracts.geojson
 

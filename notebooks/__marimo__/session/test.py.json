@@ -16,14 +16,7 @@
           }
         }
       ],
-      "console": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "[04/26/26 09:55:30] INFO     Using 'conf/logging.yml' as logging configuration. You can change this by setting the   __init__.py:272\n                             KEDRO_LOGGING_CONFIG environment variable accordingly.                                                 \n",
-          "mimetype": "text/plain"
-        }
-      ]
+      "console": []
     },
     {
       "id": "MJUe",
@@ -60,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[04/26/26 09:56:01] INFO     Kedro is sending anonymous usage data with the sole purpose of improving the product. No  plugin.py:242\n                             personal data or IP addresses are stored on our side. To opt out, set the                              \n                             `KEDRO_DISABLE_TELEMETRY` or `DO_NOT_TRACK` environment variables, or create a                         \n                             `.telemetry` file in the current working directory with the contents `consent: false`. To              \n                             hide this message, explicitly grant or deny consent. Read more at                                      \n                             https://docs.kedro.org/en/stable/about/telemetry/                                                      \n",
+          "text": "[04/26/26 12:08:06] INFO     Kedro is sending anonymous usage data with the sole purpose of improving the product. No  plugin.py:242\n                             personal data or IP addresses are stored on our side. To opt out, set the                              \n                             `KEDRO_DISABLE_TELEMETRY` or `DO_NOT_TRACK` environment variables, or create a                         \n                             `.telemetry` file in the current working directory with the contents `consent: false`. To              \n                             hide this message, explicitly grant or deny consent. Read more at                                      \n                             https://docs.kedro.org/en/stable/about/telemetry/                                                      \n",
           "mimetype": "text/plain"
         }
       ]
@@ -72,7 +65,7 @@
         {
           "type": "data",
           "data": {
-            "application/json": "[\"nyc_crashes_raw\", \"metadata_raw\", \"census_tracts_raw\", \"census_tracts_geometry_raw\", \"nyc_census_raw\", \"nyc_census_geodf\", \"nyc_crashes\", \"fetch_metadata\", \"parameters\", \"params:nyc_crashes\", \"params:nyc_crashes.initial_date\", \"params:nyc_crashes.socrata\", \"params:nyc_crashes.socrata.dataset_id\", \"params:nyc_crashes.socrata.domain\", \"params:nyc_crashes.socrata.app_token\", \"params:nyc_crashes.incremental\", \"params:nyc_crashes.incremental.date_column\", \"params:nyc_census_tracts\", \"params:nyc_census_tracts.api_key\", \"params:nyc_census_tracts.request_params\", \"params:nyc_census_tracts.request_params.base_url\", \"params:nyc_census_tracts.request_params.geography\", \"params:nyc_census_tracts.request_params.get\", \"params:nyc_census_tracts.request_params.state_fips\", \"params:nyc_census_tracts.request_params.county_fips\"]"
+            "application/json": "[\"nyc_crashes_raw\", \"metadata_raw\", \"nyc_census_geometry_raw\", \"nyc_census_raw\", \"nyc_census_geodf\", \"nyc_crashes\", \"fetch_metadata\", \"parameters\", \"params:nyc_crashes\", \"params:nyc_crashes.initial_date\", \"params:nyc_crashes.socrata\", \"params:nyc_crashes.socrata.dataset_id\", \"params:nyc_crashes.socrata.domain\", \"params:nyc_crashes.socrata.app_token\", \"params:nyc_crashes.incremental\", \"params:nyc_crashes.incremental.date_column\", \"params:nyc_census_tracts\", \"params:nyc_census_tracts.api_key\", \"params:nyc_census_tracts.request_params\", \"params:nyc_census_tracts.request_params.base_url\", \"params:nyc_census_tracts.request_params.geography\", \"params:nyc_census_tracts.request_params.get\", \"params:nyc_census_tracts.request_params.state_fips\", \"params:nyc_census_tracts.request_params.county_fips\", \"params:census_geometry\", \"params:census_geometry.census_geometry_url\"]"
           }
         }
       ],
@@ -80,7 +73,7 @@
     },
     {
       "id": "lEQa",
-      "code_hash": "3284a1f312eee50d31d5d450842dd10e",
+      "code_hash": "740e46b9ce6db839b23d41a924e9d9cd",
       "outputs": [
         {
           "type": "data",
@@ -93,7 +86,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[04/26/26 10:08:35] INFO     Loading data from nyc_crashes_raw (CSVDataset)...                                   data_catalog.py:403\n",
+          "text": "[04/26/26 12:08:11] INFO     Loading data from nyc_crashes (ParquetDataset)...                                   data_catalog.py:403\n",
           "mimetype": "text/plain"
         }
       ]

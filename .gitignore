@@ -17,3 +17,4 @@ data/02_primary/*.parquet
 conf/local/credentials.yml
 src/tdsp_navigator/pipelines/data_ingestion/secrets.txt
 conf/local/globals.yml
+stats.json

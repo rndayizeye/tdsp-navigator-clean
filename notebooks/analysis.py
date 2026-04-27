@@ -12,8 +12,25 @@ def _():
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
     import warnings
+    from kedro.framework.session import KedroSession
+    from kedro.framework.startup import bootstrap_project
+    from pathlib import Path
     warnings.filterwarnings("ignore")
-    return go, make_subplots, mo, pd, px
+    return KedroSession, Path, bootstrap_project, go, make_subplots, mo, pd, px
+
+
+@app.cell
+def _(KedroSession, Path, bootstrap_project):
+    # Bootstrap the project root
+    project_path = Path.cwd()
+    bootstrap_project(project_path=project_path)
+
+    # Create a session
+
+    session = KedroSession.create()
+    context = session.load_context()
+    catalog = context.catalog
+    return (catalog,)
 
 
 @app.cell
@@ -248,7 +265,7 @@ def _(df, px):
         color="number_of_persons_killed",
         size="number_of_persons_killed",
         hover_data=["crash_date", "borough", "on_street_name", "contributing_factor_vehicle_1"],
-        color_continuous_scale="YlOrRd",
+        color_continuous_scale="Reds",
         zoom=10,
         mapbox_style="carto-positron",
         title=f"Fatal Crash Locations ({len(fatal_map):,} crashes)",
@@ -257,12 +274,260 @@ def _(df, px):
     )
     fig_map.update_layout(coloraxis_colorbar_title="People<br>Killed")
     fig_map
-    return (fatal_map,)
+    return (fig_map,)
 
 
 @app.cell
-def _(fatal_map):
-    fatal_map.head()
+def _(fig_map):
+    fig_map
+    return
+
+
+@app.cell
+def _(df, mo):
+    #Time slider
+    year_slider = mo.ui.slider(
+        start=int(df["year"].min()),
+        stop=int(df["year"].max()),
+        step=1,
+        value=2014,
+        label="Select Year",
+    )
+    year_slider
+    return (year_slider,)
+
+
+@app.cell
+def _(catalog, df, px, year_slider):
+    def _():
+        # Map of Fatality Rate by Borough Over Time
+        import json
+
+        # ── Borough population from census tracts ────────────────────
+        county_to_borough = {
+            "005": "BRONX",
+            "047": "BROOKLYN",
+            "061": "MANHATTAN",
+            "081": "QUEENS",
+            "085": "STATEN ISLAND",
+        }
+
+        gdf = catalog.load("nyc_census_geodf").copy()
+        gdf["borough"] = gdf["county"].map(county_to_borough)
+
+        # Aggregate geometry and population to borough level
+        borough_geo = gdf.dissolve(
+            by="borough",
+            aggfunc={"population_total": "sum"},
+        ).reset_index()
+
+        # Adjust projection
+        borough_geo = borough_geo.to_crs(epsg=4326)
+
+        # ── Crash fatalities by borough and year ─────────────────────
+        selected_year = year_slider.value
+
+        crash_borough = (
+            df[
+                (df["year"] == selected_year) &
+                (df["borough"].notna()) &
+                (df["borough"] != "")
+            ]
+            .groupby("borough")
+            .agg(
+                total_killed=("number_of_persons_killed", "sum"),
+                total_crashes=("collision_id", "count"),
+            )
+            .reset_index()
+        )
+
+        # ── Join crash data to borough polygons ──────────────────────
+        borough_map = borough_geo.merge(
+            crash_borough,
+            on="borough",
+            how="left",
+        ).fillna({"total_killed": 0, "total_crashes": 0})
+        borough_map_crs = borough_map.crs
+        # Fatalities per 100k population
+        borough_map["fatality_rate"] = (
+            borough_map["total_killed"] / borough_map["population_total"] * 100_000
+        ).round(2)
+
+        # ── Plot ─────────────────────────────────────────────────────
+        # ── Plot ─────────────────────────────────────────────────────
+        # Build GeoJSON with explicit feature IDs matching the dataframe index
+        geojson_data = json.loads(borough_map.geometry.to_json())
+        for i, feature in enumerate(geojson_data["features"]):
+            feature["id"] = i
+
+    # ── Plot ─────────────────────────────────────────────────────
+            # Build GeoJSON with explicit feature IDs matching the dataframe index
+            geojson_data = json.loads(borough_map.geometry.to_json())
+            for i, feature in enumerate(geojson_data["features"]):
+                feature["id"] = i
+
+            fig_borough_map = px.choropleth_mapbox(
+                borough_map.reset_index(),
+                geojson=geojson_data,
+                locations="index",              # ← use the reset index column
+                color="fatality_rate",
+                featureidkey="id",              # ← tell Plotly where to find the id in GeoJSON
+                hover_name="borough",
+                hover_data={
+                    "fatality_rate": ":.2f",
+                    "total_killed": True,
+                    "total_crashes": True,
+                    "population_total": True,
+                    "index": False,             # ← hide index from hover
+                },
+                color_continuous_scale="Reds",
+                mapbox_style="carto-positron",
+                zoom=9,
+                center={"lat": 40.7128, "lon": -74.0060},
+                opacity=0.7,
+                title=f"Fatality Rate per 100k Population by Borough — {selected_year}",
+                height=600,
+                labels={
+                    "fatality_rate": "Fatalities per 100k",
+                    "total_killed": "Total Killed",
+                    "total_crashes": "Total Crashes",
+                    "population_total": "Population",
+                },
+            )
+        return fig_borough_map
+
+
+
+    _()
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## The most dangerous streets
+    """)
+    return
+
+
+@app.cell
+def _(df, pd):
+    import re
+
+    def normalize_street_name(name: str) -> str:
+        if pd.isna(name):
+            return None
+        name = name.upper().strip()
+        # Collapse multiple spaces
+        name = re.sub(r'\s+', ' ', name)
+        # Standardize common abbreviations
+        replacements = {
+            r'\bST\b': 'STREET',
+            r'\bAVE\b': 'AVENUE',
+            r'\bBLVD\b': 'BOULEVARD',
+            r'\bRD\b': 'ROAD',
+            r'\bDR\b': 'DRIVE',
+            r'\bPL\b': 'PLACE',
+            r'\bPKWY\b': 'PARKWAY',
+            r'\bEXPY\b': 'EXPRESSWAY',
+            r'\bHWY\b': 'HIGHWAY',
+            r'\bBDWAY\b': 'BROADWAY',
+        }
+        for pattern, replacement in replacements.items():
+            name = re.sub(pattern, replacement, name)
+        return name
+
+    df["street_normalized"] = df["on_street_name"].apply(normalize_street_name)
+    return (normalize_street_name,)
+
+
+@app.cell
+def _(df, px):
+    # The top dangerous streets for Vurnelable Road Users
+    fatal_streets = (
+        df[df["any_killed"]]
+        .groupby('street_normalized')['number_of_persons_killed']
+        .sum()
+        .sort_values(ascending = False)
+        .head(15)
+        .reset_index()
+    )
+
+    fig_street_danger = px.bar(
+        fatal_streets,
+        x="number_of_persons_killed",   
+        y="street_normalized",           
+        orientation="h",
+        title="Top 15 Deadliest Streets — Vulnerable Road Users",
+        labels={
+            "number_of_persons_killed": "Total Killed",
+            "street_normalized": "",     
+        },
+        color="number_of_persons_killed",
+        color_continuous_scale="Reds",
+    )
+    fig_street_danger.update_layout(
+        height=500,
+        yaxis={"categoryorder": "total ascending"},
+        coloraxis_showscale=False,
+    )
+    fig_street_danger
+    return
+
+
+@app.cell
+def _(df, mo):
+    borough_options = mo.ui.dropdown(
+        options=["ALL"] + sorted(df["borough"].dropna().unique().tolist()),
+        value="ALL",
+        label="Select Borough",
+    )
+    borough_options
+    return (borough_options,)
+
+
+@app.cell
+def _(borough_options, df, px):
+    def _():
+        selected = borough_options.value
+
+        if selected == "ALL":
+            filtered = df[df["any_killed"]]
+        else:
+            filtered = df[df["any_killed"] & (df["borough"] == selected)]
+
+        fatal_streets = (
+            filtered
+            .groupby("street_normalized")["number_of_persons_killed"]
+            .sum()
+            .sort_values(ascending=False)
+            .head(15)
+            .reset_index()
+            .sort_values("number_of_persons_killed", ascending=True)
+        )
+
+        fig_street_danger = px.bar(
+            fatal_streets,
+            x="number_of_persons_killed",
+            y="street_normalized",
+            orientation="h",
+            title=f"Top 15 Deadliest Streets — {selected}",
+            labels={
+                "number_of_persons_killed": "Total Killed",
+                "street_normalized": "",
+            },
+            color="number_of_persons_killed",
+            color_continuous_scale="Reds",
+        )
+        fig_street_danger.update_layout(
+            height=500,
+            yaxis={"categoryorder": "total ascending"},
+            coloraxis_showscale=False,
+        )
+        return fig_street_danger
+
+
+    _()
     return
 
 
@@ -271,12 +536,6 @@ def _(mo):
     mo.md("""
     ## 3 · Severity Analysis — What Factors Predict Fatalities?
     """)
-    return
-
-
-@app.cell
-def _(df):
-    df.head(5)
     return
 
 
@@ -385,6 +644,296 @@ def _(mo):
     - **Severity**: Is driver inattention / distraction the dominant factor in fatal crashes? How have pedestrian and cyclist fatality rates trended since 2014?
     - **Vision Zero**: Is the fatality rate per crash improving over time, or are raw numbers declining only because total crashes declined (e.g. COVID)?
     """)
+    return
+
+
+@app.cell
+def _(pd):
+    HIGHWAYS = [
+        "BELT PARKWAY", "GRAND CENTRAL PARKWAY", "MAJOR DEEGAN EXPRESSWAY",
+        "BRUCKNER BOULEVARD", "HENRY HUDSON PARKWAY", "CROSS ISLAND PARKWAY",
+        "LONG ISLAND EXPRESSWAY", "CROSS BRONX EXPRESSWAY",
+        "BROOKLYN QUEENS EXPRESSWAY", "BRUCKNER EXPRESSWAY", "FDR DRIVE",
+        "STATEN ISLAND EXPRESSWAY", "GOWANUS EXPRESSWAY", "HARLEM RIVER DRIVE",
+        "HUTCHINSON RIVER PARKWAY", "SHERIDAN EXPRESSWAY", "VAN WYCK EXPRESSWAY",
+        "BELT PARKWAY SERVICE ROAD",
+    ]
+
+    def classify_street_type(street: str) -> str:
+        if pd.isna(street):
+            return "Unknown"
+        if street in HIGHWAYS:
+            return "Highway"
+        if any(x in street for x in ["EXPRESSWAY", "PARKWAY", "FREEWAY"]):
+            return "Highway"
+        return "Surface Street"
+
+    return (classify_street_type,)
+
+
+@app.cell
+def _(df, normalize_street_name, pd):
+    df["street_normalized"] = df["on_street_name"].apply(normalize_street_name)
+
+    def build_intersection_label(row) -> str | None:
+        if pd.isna(row["street_normalized"]) or pd.isna(row["cross_street_normalized"]):
+            return None
+        return " & ".join(sorted([
+            str(row["street_normalized"]),
+            str(row["cross_street_normalized"]),
+        ]))
+
+
+    def dominant_factor(series: pd.Series) -> str:
+        counts = series[series != "Unspecified"].value_counts()
+        return counts.index[0] if not counts.empty else "Unspecified"
+
+
+    def dominant_road_user(row) -> str:
+        users = {
+            "Pedestrian": row["ped_killed"],
+            "Cyclist":    row["cyc_killed"],
+            "Motorist":   row["mot_killed"],
+        }
+        return max(users, key=users.get)
+
+
+    def get_policy_recommendation(factor: str, road_user: str) -> str:
+        recommendations = {
+            "Driver Inattention/Distraction": "Speed cameras, signal retiming, distracted driving enforcement",
+            "Failure to Yield Right-of-Way": "Leading pedestrian intervals, exclusive pedestrian phases",
+            "Speeding": "Speed bumps, road diet, automated speed enforcement",
+            "Alcohol Involvement": "Late night enforcement, DUI checkpoints",
+            "Following Too Closely": "Speed reduction, congestion management",
+            "Traffic Control Disregarded": "Signal upgrades, red light cameras",
+            "Unsafe Speed": "Speed cameras, road diet",
+        }
+        base = recommendations.get(factor, "Review traffic control and enforcement")
+        if road_user == "Pedestrian":
+            return base + " + crosswalk hardening, pedestrian refuge islands"
+        if road_user == "Cyclist":
+            return base + " + protected bike lanes, intersection hardening"
+        return base
+
+    return (
+        build_intersection_label,
+        dominant_factor,
+        dominant_road_user,
+        get_policy_recommendation,
+    )
+
+
+@app.cell
+def _(
+    build_intersection_label,
+    classify_street_type,
+    df,
+    normalize_street_name,
+    pd,
+):
+    def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        df["street_normalized"] = (
+            df["on_street_name"]
+            .apply(normalize_street_name)
+            .fillna(df["off_street_name"].apply(normalize_street_name))
+        )
+        df["off_street_normalized"] = df["off_street_name"].apply(normalize_street_name)
+        df["cross_street_normalized"] = df["cross_street_name"].apply(normalize_street_name)
+        df["intersection"] = df.apply(build_intersection_label, axis=1)
+        df["street_type"] = df["street_normalized"].apply(classify_street_type)
+        return df
+
+    df_enriched = enrich_dataframe(df)
+    return (df_enriched,)
+
+
+@app.cell
+def _(dominant_factor, dominant_road_user, get_policy_recommendation, pd):
+    def compute_street_stats(
+        df: pd.DataFrame,
+        borough: str = "ALL",
+        street_type: str = "ALL",
+        top_n: int = 20,
+    ) -> pd.DataFrame:
+
+        # ── All crashes per street for correct denominator ────────
+        all_crashes = df[df["street_normalized"].notna()]
+        if borough != "ALL":
+            all_crashes = all_crashes[all_crashes["borough"] == borough]
+        if street_type != "ALL":
+            all_crashes = all_crashes[all_crashes["street_type"] == street_type]
+
+        group_cols = ["street_normalized"] if borough == "ALL" else ["street_normalized", "borough"]
+
+        all_crash_counts = (
+            all_crashes
+            .groupby(group_cols)
+            .agg(total_crashes=("collision_id", "count"))
+            .reset_index()
+        )
+
+        # ── Fatal crashes only for killed counts ─────────────────
+        fatal = df[df["any_killed"] & df["street_normalized"].notna()]
+        if borough != "ALL":
+            fatal = fatal[fatal["borough"] == borough]
+        if street_type != "ALL":
+            fatal = fatal[fatal["street_type"] == street_type]
+
+        stats = (
+            fatal
+            .groupby(group_cols)
+            .agg(
+                total_killed=("number_of_persons_killed", "sum"),
+                ped_killed=("number_of_pedestrians_killed", "sum"),
+                cyc_killed=("number_of_cyclist_killed", "sum"),
+                mot_killed=("number_of_motorist_killed", "sum"),
+                top_factor=("contributing_factor_vehicle_1", dominant_factor),
+                years_active=("year", lambda x: f"{int(x.min())}–{int(x.max())}"),
+                street_type=("street_type", "first"),
+            )
+            .reset_index()
+        )
+
+        # ── Join correct denominator ──────────────────────────────
+        stats = stats.merge(all_crash_counts, on=group_cols, how="left")
+
+        if borough == "ALL":
+            stats["borough"] = "ALL"
+
+        # Fatality rate = killed per 1,000 total crashes on that street
+        stats["fatality_rate"] = (
+            stats["total_killed"] / stats["total_crashes"] * 1000
+        ).round(2)
+
+        stats["dominant_road_user"] = stats.apply(dominant_road_user, axis=1)
+
+        stats["policy_recommendation"] = stats.apply(
+            lambda r: get_policy_recommendation(r["top_factor"], r["dominant_road_user"]),
+            axis=1,
+        )
+
+        return (
+            stats
+            .sort_values("total_killed", ascending=False)
+            .head(top_n)
+            .reset_index(drop=True)
+        )
+
+    return (compute_street_stats,)
+
+
+@app.cell
+def _(go, pd, px):
+    def plot_street_chart(stats: pd.DataFrame, borough: str) -> go.Figure:
+        fig = px.bar(
+            stats.sort_values("total_killed", ascending=True),
+            x="total_killed",
+            y="street_normalized",
+            orientation="h",
+            color="top_factor",
+            hover_data={
+                "borough": True,
+                "total_crashes": True,
+                "fatality_rate": True,
+                "dominant_road_user": True,
+                "years_active": True,
+                "top_factor": True,
+                "total_killed": True,
+                "policy_recommendation": True,
+                "street_normalized": False,
+            },
+            title=f"Top 20 Deadliest Streets — {borough}",
+            labels={
+                "total_killed": "Total Killed",
+                "street_normalized": "",
+                "top_factor": "Top Factor",
+                "fatality_rate": "Fatality Rate (%)",
+                "dominant_road_user": "Road User Most Affected",
+                "total_crashes": "Total Crashes",
+                "years_active": "Active Since",
+                "policy_recommendation": "Recommendation",
+            },
+            height=650,
+            )
+        fig.update_layout(
+            title=dict(
+                    text=f"Top 20 Deadliest Streets — {borough}",
+                    x=0,
+                    y=0.98,
+                    xanchor="left",
+                ),
+                yaxis={"categoryorder": "total ascending"},
+                legend=dict(
+                    orientation="h",
+                    yanchor="top",
+                    y=-0.12,        # ← move legend below the chart
+                    xanchor="left",
+                    x=0,
+                    title="Top Contributing Factor",
+                ),
+                margin=dict(l=20, r=20, t=60, b=120),  # ← increase bottom margin for legend
+                height=700,                              # ← slightly taller to compensate
+            )
+        return fig
+
+    return (plot_street_chart,)
+
+
+@app.cell
+def _(df_enriched, mo):
+    borough_filter = mo.ui.dropdown(
+        options=["ALL"] + sorted(df_enriched["borough"].dropna().unique().tolist()),
+        value="ALL",
+        label="Borough",
+    )
+
+    street_type_filter = mo.ui.dropdown(
+        options=["ALL", "Highway", "Surface Street"],
+        value="ALL",
+        label="Street Type",
+    )
+
+    mo.hstack([borough_filter, street_type_filter])
+    return borough_filter, street_type_filter
+
+
+@app.cell
+def _(
+    borough_filter,
+    compute_street_stats,
+    df_enriched,
+    mo,
+    plot_street_chart,
+    street_type_filter,
+):
+    stats = compute_street_stats(
+        df_enriched,
+        borough=borough_filter.value,
+        street_type=street_type_filter.value,
+    )
+    fig = plot_street_chart(stats, borough=borough_filter.value)
+
+    agency_note = {
+        "Highway": "🏛️ **Responsible Agency**: NYS DOT / MTA — Speed enforcement, highway redesign, managed speed zones",
+        "Surface Street": "🏙️ **Responsible Agency**: NYC DOT / NYPD Vision Zero — Signal timing, pedestrian intervals, local enforcement",
+        "ALL": "ℹ️ Select a street type to see agency-specific policy recommendations",
+    }
+
+    mo.vstack([
+        fig,
+        mo.md(agency_note[street_type_filter.value]),
+        mo.md(f"""
+    ### Top 10 Policy Priorities — {street_type_filter.value} | {borough_filter.value}
+
+    | Rank | Street | Killed | Fatality Rate (per 1k crashes) | Factor | Road User | Recommendation |
+    |------|--------|--------|--------------------------------|--------|-----------|----------------|
+    {"".join(
+        f"| {i+1} | {r['street_normalized']} | {int(r['total_killed'])} | {r['fatality_rate']}% | {r['top_factor']} | {r['dominant_road_user']} | {r['policy_recommendation']} |{chr(10)}"
+        for i, r in stats.head(10).iterrows()
+    )}
+        """),
+    ])
     return
 
 

@@ -7,6 +7,7 @@ from .nodes import (
     fetch_and_store_nyc_crashes,
     fetch_nyc_census_tracts_data,
     preprocess_census_geometry,
+    fetch_census_geometry,
 )
 
 
@@ -46,8 +47,15 @@ def create_pipeline(**kwargs) -> Pipeline:
                 tags=["data_ingestion", "api", "census"],
             ),
             node(
+                func=fetch_census_geometry,
+                inputs="params:census_geometry",
+                outputs="nyc_census_geometry_raw",  # Raw census geometry data
+                name="fetch_nyc_census_geometry_data_node",
+                tags=["data_ingestion", "api", "census", "geometry"],
+            ),
+            node(
                 func=preprocess_census_geometry,
-                inputs=["nyc_census_raw"],
+                inputs=["nyc_census_raw", "nyc_census_geometry_raw",],
                 outputs="nyc_census_geodf",
                 name="preprocess_add_geography_census_tracts_node",
                 tags=["data_ingestion", "census", "preprocessing", "geography"],

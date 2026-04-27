@@ -44,7 +44,7 @@ def _(catalog):
 
 @app.cell
 def _(catalog):
-    nyc_crashes = catalog.load(name="nyc_crashes_raw")
+    nyc_crashes = catalog.load(name="nyc_crashes")
     return (nyc_crashes,)
 
 
@@ -56,7 +56,29 @@ def _(nyc_crashes):
 
 @app.cell
 def _(catalog):
-    catalog.load("fetch_metadata")
+    nyc_census_data_geo = catalog.load("nyc_census_geodf")
+    nyc_census_data_geo.head()
+    return (nyc_census_data_geo,)
+
+
+@app.cell
+def _(nyc_census_data_geo):
+    nyc_census_data_geo.plot()
+    return
+
+
+@app.cell
+def _(catalog):
+    nyc_census_data = catalog.load("nyc_census_raw")
+    nyc_census_data.head()
+
+    return
+
+
+@app.cell
+def _(catalog):
+    nyc_census_data_geo_raw = catalog.load('nyc_census_geometry_raw')
+    nyc_census_data_geo_raw.head()
     return
 
 

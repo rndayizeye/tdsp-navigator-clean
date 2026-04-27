@@ -383,6 +383,11 @@ def _rename_census_columns(df):
     # create poverty rate column
     if "poverty_total" in df.columns and "population_total" in df.columns:
         df["poverty_rate"] = df["poverty_total"] / df["population_total"]
+    
+    # Extract the numeric part of GEO_ID for merging with geometry data 
+    df['geo_id'] = df['geo_id'].str.split("US", expand=True)[1]
+
+
     return df
 
 
@@ -402,16 +407,17 @@ def _convert_numeric_columns(df):
 # ----------------------------------------------------------------.
 
 
-def preprocess_census_geometry(df: pd.DataFrame) -> gpd.GeoDataFrame:
+def preprocess_census_geometry(df: pd.DataFrame,
+                                geometry_df: gpd.GeoDataFrame,) -> gpd.GeoDataFrame:
     """takes the raw acs5 census tract data, add merge it with polygon data
     and convert to a GeoDataFrame"""
     # Assuming df has 'GEO_ID' and 'geometry' columns
     if "geo_id" not in df.columns:
         logger.error(f"Input DataFrame must contain 'geo_id' columns. Available columns: {list(df.columns)}")
         raise ValueError("Missing required columns in input DataFrame")
-
-    # Fetch geometry data for census tracts
-    geometry_df = _fetch_census_geometry()
+    if "GEO_ID" not in geometry_df.columns or "geometry" not in geometry_df.columns:
+        logger.error(f"Geometry DataFrame must contain 'GEO_ID' and 'geometry' columns. Available columns: {list(geometry_df.columns)}")
+        raise ValueError("Missing required columns in geometry DataFrame")
     # Merge the geometry data with the main DataFrame
     gdf = _merge_census_geometry(df, geometry_df)
 
@@ -420,34 +426,6 @@ def preprocess_census_geometry(df: pd.DataFrame) -> gpd.GeoDataFrame:
     )
 
     return gdf
-
-
-# Helper function to fetch geometry data for census tracts
-def _fetch_census_geometry() -> gpd.GeoDataFrame:
-    """Fetch geometry data for given GEO_IDs from Census TIGER/Line shapefiles or API."""
-    # Fetch the geometry data from the Census TIGER/Line shapefiles or an appropriate API endpoint, and return a GeoDataFrame with 'GEO_ID' and 'geometry' columns.
-
-    # Access shapefile of NYC recent census tracts  shapefile
-    url = "https://www2.census.gov/geo/tiger/TIGER2023/TRACT/tl_2023_36_tract.zip"
-    nyc_tracts_recent = gpd.read_file(url)
-
-    # Reproject shapefile to UTM Zone 17N
-    # https://spatialreference.org/ref/epsg/wgs-84-utm-zone-17n/
-    nyc_tracts_recent = nyc_tracts_recent.to_crs(epsg=32617)
-
-    # Print GeoDataFrame of shapefile
-    print(nyc_tracts_recent.tail(2))
-    print("Shape: ", nyc_tracts_recent.shape)
-
-    # Check shapefile projection
-    logger.info(f"The shapefile projection is: {nyc_tracts_recent.crs}")
-
-    # rename GEOID column to GEO_ID and BoroCode to borough to match the main census data for merging
-    nyc_tracts_recent = nyc_tracts_recent.rename(
-        columns={"GEOID": "GEO_ID", "BoroCode": "borough"}
-    )
-
-    return nyc_tracts_recent[["GEO_ID", "geometry"]]
 
 
 # helper to merge census geometry with main census data
@@ -459,7 +437,8 @@ def _merge_census_geometry(
         logger.error("Both DataFrames must contain 'GEO_ID' column for merging")
         raise ValueError("Missing 'GEO_ID' column in one of the DataFrames")
 
-    merged_gdf = geometry_df.merge(census_df, left_on="GEO_ID", right_on="geo_id", how="left")
+    merged_gdf = census_df.merge(geometry_df, left_on="geo_id", right_on="GEO_ID", how="left")
+    merged_gdf = gpd.GeoDataFrame(merged_gdf, geometry="geometry")
 
 
     logger.info(
@@ -467,3 +446,35 @@ def _merge_census_geometry(
     )
 
     return merged_gdf
+
+#----------------------------------------------------------------------------
+# Node to fetch census tracts geometry data from Census API
+#----------------------------------------------------------------------------
+
+# Helper function to fetch geometry data for census tracts
+def fetch_census_geometry(params: dict) -> gpd.GeoDataFrame:
+    """Fetch geometry data for given GEO_IDs from Census TIGER/Line shapefiles or API."""
+    # Fetch the geometry data from the Census TIGER/Line shapefiles or an appropriate API endpoint, and return a GeoDataFrame with 'GEO_ID' and 'geometry' columns.
+    #get the url for the shapefile from the parameters
+    
+    url = params["census_geometry_url"]
+    # Access shapefile of NYC recent census tracts  shapefile
+    gdf = gpd.read_file(url)
+
+    # Reproject shapefile to UTM Zone 17N
+    # https://spatialreference.org/ref/epsg/wgs-84-utm-zone-17n/
+    gdf = gdf.to_crs(epsg=32617)
+
+    # Print GeoDataFrame of shapefile
+    print(gdf.tail(2))
+    print("Shape: ", gdf.shape)
+
+    # Check shapefile projection
+    logger.info(f"The shapefile projection is: {gdf.crs}")
+
+    # rename GEOID column to GEO_ID and BoroCode to borough to match the main census data for merging
+    gdf = gdf.rename(
+        columns={"GEOID": "GEO_ID", "BoroCode": "borough"}
+    )
+
+    return gdf[["GEO_ID", "geometry"]]

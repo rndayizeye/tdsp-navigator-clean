@@ -24,7 +24,9 @@ nyc_census_tracts:
     get: "NAME,GEO_ID,B01003_001E,B17001_001E,B17001_002E"
     state_fips: "36"
     county_fips: "005,047,061,081,085"  # Bronx, Kings, New York, Queens, Richmond
-    
+
+census_geometry:
+  census_geometry_url: "https://www2.census.gov/geo/tiger/TIGER2023/TRACT/tl_2023_36_tract.zip" # Bronx, Kings, New York, Queens, Richmond    
 
 
   
