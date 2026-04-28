@@ -30,7 +30,7 @@ def _(KedroSession, Path, bootstrap_project):
     session = KedroSession.create()
     context = session.load_context()
     catalog = context.catalog
-    return (catalog,)
+    return
 
 
 @app.cell
@@ -284,121 +284,124 @@ def _(fig_map):
 
 
 @app.cell
-def _(df, mo):
-    #Time slider
-    year_slider = mo.ui.slider(
-        start=int(df["year"].min()),
-        stop=int(df["year"].max()),
-        step=1,
-        value=2014,
-        label="Select Year",
-    )
-    year_slider
-    return (year_slider,)
+def _(df, dominant_factor, pd):
+    def compute_h3_fatality_map(df: pd.DataFrame, resolution: int = 9) -> pd.DataFrame:
+        import h3
 
+        fatal = df[
+            df["any_killed"] &
+            df["latitude"].notna() &
+            df["longitude"].notna() &
+            df["latitude"].between(40.4, 40.95) &
+            df["longitude"].between(-74.3, -73.7)
+        ].copy()
 
-@app.cell
-def _(catalog, df, px, year_slider):
-    def _():
-        # Map of Fatality Rate by Borough Over Time
-        import json
+        fatal["h3_cell"] = fatal.apply(
+            lambda r: h3.latlng_to_cell(r["latitude"], r["longitude"], resolution),
+            axis=1,
+        )
 
-        # ── Borough population from census tracts ────────────────────
-        county_to_borough = {
-            "005": "BRONX",
-            "047": "BROOKLYN",
-            "061": "MANHATTAN",
-            "081": "QUEENS",
-            "085": "STATEN ISLAND",
-        }
-
-        gdf = catalog.load("nyc_census_geodf").copy()
-        gdf["borough"] = gdf["county"].map(county_to_borough)
-
-        # Aggregate geometry and population to borough level
-        borough_geo = gdf.dissolve(
-            by="borough",
-            aggfunc={"population_total": "sum"},
-        ).reset_index()
-
-        # Adjust projection
-        borough_geo = borough_geo.to_crs(epsg=4326)
-
-        # ── Crash fatalities by borough and year ─────────────────────
-        selected_year = year_slider.value
-
-        crash_borough = (
-            df[
-                (df["year"] == selected_year) &
-                (df["borough"].notna()) &
-                (df["borough"] != "")
-            ]
-            .groupby("borough")
+        h3_stats = (
+            fatal.groupby("h3_cell")
             .agg(
                 total_killed=("number_of_persons_killed", "sum"),
-                total_crashes=("collision_id", "count"),
+                crash_count=("collision_id", "count"),
+                top_factor=("contributing_factor_vehicle_1", dominant_factor),
+                dominant_user=("number_of_pedestrians_killed", lambda x: (
+                    "Pedestrian" if x.sum() >= fatal.loc[x.index, "number_of_cyclist_killed"].sum()
+                    and x.sum() >= fatal.loc[x.index, "number_of_motorist_killed"].sum()
+                    else "Cyclist" if fatal.loc[x.index, "number_of_cyclist_killed"].sum() >=
+                    fatal.loc[x.index, "number_of_motorist_killed"].sum()
+                    else "Motorist"
+                )),
             )
             .reset_index()
         )
+        h3_stats = h3_stats[h3_stats["total_killed"] >= 2]
+        return h3_stats
 
-        # ── Join crash data to borough polygons ──────────────────────
-        borough_map = borough_geo.merge(
-            crash_borough,
-            on="borough",
-            how="left",
-        ).fillna({"total_killed": 0, "total_crashes": 0})
-        borough_map_crs = borough_map.crs
-        # Fatalities per 100k population
-        borough_map["fatality_rate"] = (
-            borough_map["total_killed"] / borough_map["population_total"] * 100_000
-        ).round(2)
+    h3_data = compute_h3_fatality_map(df)
+    print(f"H3 cells with fatal crashes: {len(h3_data)}")
+    print(f"Max fatalities in a single cell: {h3_data['total_killed'].max()}")
+    return (h3_data,)
 
-        # ── Plot ─────────────────────────────────────────────────────
-        # ── Plot ─────────────────────────────────────────────────────
-        # Build GeoJSON with explicit feature IDs matching the dataframe index
-        geojson_data = json.loads(borough_map.geometry.to_json())
-        for i, feature in enumerate(geojson_data["features"]):
-            feature["id"] = i
 
-    # ── Plot ─────────────────────────────────────────────────────
-            # Build GeoJSON with explicit feature IDs matching the dataframe index
-            geojson_data = json.loads(borough_map.geometry.to_json())
-            for i, feature in enumerate(geojson_data["features"]):
-                feature["id"] = i
+@app.cell
+def _(h3_data, pd):
+    def h3_to_geojson(h3_data: pd.DataFrame) -> dict:
+        import h3
 
-            fig_borough_map = px.choropleth_mapbox(
-                borough_map.reset_index(),
-                geojson=geojson_data,
-                locations="index",              # ← use the reset index column
-                color="fatality_rate",
-                featureidkey="id",              # ← tell Plotly where to find the id in GeoJSON
-                hover_name="borough",
-                hover_data={
-                    "fatality_rate": ":.2f",
-                    "total_killed": True,
-                    "total_crashes": True,
-                    "population_total": True,
-                    "index": False,             # ← hide index from hover
+        features = []
+        for _, row in h3_data.iterrows():
+            boundary = h3.cell_to_boundary(row["h3_cell"])
+            # h3 returns (lat, lng) pairs — GeoJSON needs (lng, lat)
+            coords = [[lng, lat] for lat, lng in boundary]
+            coords.append(coords[0])  # close the polygon
+
+            features.append({
+                "type": "Feature",
+                "id": row["h3_cell"],
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [coords],
                 },
-                color_continuous_scale="Reds",
-                mapbox_style="carto-positron",
-                zoom=9,
-                center={"lat": 40.7128, "lon": -74.0060},
-                opacity=0.7,
-                title=f"Fatality Rate per 100k Population by Borough — {selected_year}",
-                height=600,
-                labels={
-                    "fatality_rate": "Fatalities per 100k",
-                    "total_killed": "Total Killed",
-                    "total_crashes": "Total Crashes",
-                    "population_total": "Population",
+                "properties": {
+                    "h3_cell": row["h3_cell"],
+                    "total_killed": row["total_killed"],
+                    "crash_count": row["crash_count"],
+                    "top_factor": row["top_factor"],
                 },
-            )
-        return fig_borough_map
+            })
+
+        return {"type": "FeatureCollection", "features": features}
+
+    geojson = h3_to_geojson(h3_data)
+    print(f"GeoJSON features: {len(geojson['features'])}")
+    return (geojson,)
 
 
+@app.cell
+def _(geojson, go, h3_data, pd, px):
+    def plot_h3_fatality_map(h3_data: pd.DataFrame, geojson: dict) -> go.Figure:
+        fig = px.choropleth_mapbox(
+            h3_data,
+            geojson=geojson,
+            locations="h3_cell",
+            featureidkey="id",
+            color="total_killed",
+            hover_data={
+                "h3_cell": False,
+                "total_killed": True,
+                "crash_count": True,
+                "top_factor": True,
+                "dominant_user": True,
+            },
+            color_continuous_scale= "YlOrRd",
+            mapbox_style="carto-positron",
+            zoom=10.5,
+            center={"lat": 40.730, "lon": -73.980},
+            opacity=0.6,
+            title="Fatal Crash Hotspots — NYC 2012–2026 (H3 Resolution 9, ~175m cells)",
+            height=650,
+            labels={
+                "total_killed": "Total Killed",
+                "crash_count": "Fatal Crashes",
+                "top_factor": "Top Factor",
+                "dominant_user": "Road User",
+            },
+        )
+        fig.update_layout(
+            coloraxis_colorbar=dict(
+                title="Fatalities<br>(2012–2026)",
+                thickness=15,
+                len=0.6,
+                tickvals=[2, 4, 6, 8]
+            ),
+            margin=dict(l=0, r=0, t=50, b=0),
+        )
+        return fig
 
-    _()
+    plot_h3_fatality_map(h3_data, geojson)
     return
 
 
@@ -411,7 +414,7 @@ def _(mo):
 
 
 @app.cell
-def _(df, pd):
+def _(pd):
     import re
 
     def normalize_street_name(name: str) -> str:
@@ -437,7 +440,6 @@ def _(df, pd):
             name = re.sub(pattern, replacement, name)
         return name
 
-    df["street_normalized"] = df["on_street_name"].apply(normalize_street_name)
     return (normalize_street_name,)
 
 

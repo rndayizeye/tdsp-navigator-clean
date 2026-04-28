@@ -1,9 +1,6 @@
 """
 NYC Crashes Data Ingestion Nodes
 """
-
-from urllib import response
-
 import pandas as pd
 import logging
 from datetime import datetime
