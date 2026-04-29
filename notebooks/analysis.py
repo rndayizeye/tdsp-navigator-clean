@@ -378,8 +378,8 @@ def _(geojson, go, h3_data, pd, px):
             },
             color_continuous_scale= "YlOrRd",
             mapbox_style="carto-positron",
-            zoom=10.5,
-            center={"lat": 40.730, "lon": -73.980},
+            zoom=9,
+            center={"lat": 40.680, "lon": -73.950},
             opacity=0.6,
             title="Fatal Crash Hotspots — NYC 2012–2026 (H3 Resolution 9, ~175m cells)",
             height=650,
@@ -395,13 +395,388 @@ def _(geojson, go, h3_data, pd, px):
                 title="Fatalities<br>(2012–2026)",
                 thickness=15,
                 len=0.6,
-                tickvals=[2, 4, 6, 8]
+                tickvals=[2, 4, 6, 8],
+            ),
+            margin=dict(l=0, r=0, t=50, b=0),
+        )
+        fig.update_coloraxes(
+        colorbar_tickformat="d",
+        cmin=2,
+        cmax=h3_data["total_killed"].max(),
+        )
+        return fig
+
+    plot_h3_fatality_map(h3_data, geojson)
+    return
+
+
+@app.cell
+def _(mo):
+    hotspot_filter = mo.ui.dropdown(
+        options={
+            "All hotspots": "all",
+            "Corridor clusters (3+ neighboring cells)": "corridor",
+            "Isolated hotspots (0-2 neighboring cells)": "isolated",
+        },
+        value="All hotspots",
+        label="Hotspot Pattern",
+    )
+
+    mo.hstack([hotspot_filter])
+    return (hotspot_filter,)
+
+
+@app.cell
+def _(h3_data, pd):
+    def classify_hotspots(h3_data: pd.DataFrame) -> pd.DataFrame:
+        import h3
+
+        # Only classify cells that already pass the minimum threshold
+        h3_data = h3_data[h3_data["total_killed"] >= 2].copy()
+        h3_set = set(h3_data["h3_cell"])
+
+        def count_fatal_neighbors(cell: str) -> int:
+            neighbors = h3.grid_disk(cell, 1)
+            set(neighbors).discard(cell)
+            return sum(1 for n in neighbors if n in h3_set)
+
+        h3_data["fatal_neighbors"] = h3_data["h3_cell"].apply(count_fatal_neighbors)
+        h3_data["pattern"] = h3_data["fatal_neighbors"].apply(
+            lambda n: "corridor" if n >= 3 else "isolated"
+        )
+        return h3_data
+
+    h3_data_classified = classify_hotspots(h3_data)
+
+    # Quick summary
+    print(h3_data_classified["pattern"].value_counts().to_string())
+    return (h3_data_classified,)
+
+
+@app.cell
+def _(go, h3_data_classified, hotspot_filter, mo, pd, px):
+    def plot_h3_filtered(h3_data: pd.DataFrame, pattern_filter: str) -> go.Figure:
+        import h3 as h3lib
+
+        if pattern_filter == "corridor":
+            filtered = h3_data[h3_data["pattern"] == "corridor"]
+            subtitle = "Corridor Clusters — 3+ neighboring fatal cells"
+        elif pattern_filter == "isolated":
+            filtered = h3_data[h3_data["pattern"] == "isolated"]
+            subtitle = "Isolated Hotspots — specific intersections or short segments"
+        else:
+            filtered = h3_data
+            subtitle = "All fatal crash hotspots"
+
+        # Rebuild GeoJSON for filtered data
+        features = []
+        for _, row in filtered.iterrows():
+            boundary = h3lib.cell_to_boundary(row["h3_cell"])
+            coords = [[lng, lat] for lat, lng in boundary]
+            coords.append(coords[0])
+            features.append({
+                "type": "Feature",
+                "id": row["h3_cell"],
+                "geometry": {"type": "Polygon", "coordinates": [coords]},
+                "properties": {"h3_cell": row["h3_cell"]},
+            })
+        geojson_filtered = {"type": "FeatureCollection", "features": features}
+
+        fig = px.choropleth_mapbox(
+            filtered,
+            geojson=geojson_filtered,
+            locations="h3_cell",
+            featureidkey="id",
+            color="total_killed",
+            hover_data={
+                "h3_cell": False,
+                "total_killed": True,
+                "crash_count": True,
+                "top_factor": True,
+                "dominant_user": True,
+                "fatal_neighbors": True,
+                "pattern": True,
+            },
+            color_continuous_scale="YlOrRd",
+            range_color=[2, h3_data["total_killed"].max()],
+            mapbox_style="carto-positron",
+            zoom=10,
+            center={"lat": 40.680, "lon": -73.950},
+            opacity=0.7,
+            title=f"Fatal Crash Hotspots — {subtitle}",
+            height=650,
+            labels={
+                "total_killed": "Total Killed",
+                "crash_count": "Fatal Crashes",
+                "top_factor": "Top Factor",
+                "dominant_user": "Road User",
+                "fatal_neighbors": "Neighboring Fatal Cells",
+                "pattern": "Pattern Type",
+            },
+        )
+        fig.update_layout(
+            coloraxis_colorbar=dict(
+                title="Fatalities<br>(2012–2026)",
+                thickness=15,
+                len=0.6,
             ),
             margin=dict(l=0, r=0, t=50, b=0),
         )
         return fig
 
-    plot_h3_fatality_map(h3_data, geojson)
+
+    mo.vstack([
+        plot_h3_filtered(h3_data_classified, hotspot_filter.value),
+        mo.md(f"""
+    **Pattern breakdown** — {hotspot_filter.value}:
+    - **Corridor clusters** are contiguous chains of fatal cells along a road. 
+      These point to systemic infrastructure problems (speed, road design) 
+      requiring corridor-wide intervention.
+    - **Isolated hotspots** are individual cells surrounded by low-density areas. 
+      These are likely specific intersections with engineering defects — 
+      the highest-leverage targets for Vision Zero since a single intervention 
+      can eliminate the hotspot entirely.
+        """),
+    ])
+    return
+
+
+@app.cell
+def _(go, h3_data_classified, pd):
+    def plot_h3_poster_map(h3_data: pd.DataFrame) -> go.Figure:
+        import h3 as h3lib
+        import json
+
+        corridors = h3_data[h3_data["pattern"] == "corridor"].copy()
+        isolated = h3_data[h3_data["pattern"] == "isolated"].copy()
+
+        def get_cell_center(cell):
+            lat, lng = h3lib.cell_to_latlng(cell)
+            return lat, lng
+
+        for subset in [corridors, isolated]:
+            centers = subset["h3_cell"].apply(get_cell_center)
+            subset["lat"] = centers.apply(lambda x: x[0])
+            subset["lng"] = centers.apply(lambda x: x[1])
+
+        fig = go.Figure()
+
+        # ── Corridor clusters ─────────────────────────────────────
+        fig.add_trace(go.Scattermapbox(
+            lat=corridors["lat"],
+            lon=corridors["lng"],
+            mode="markers",
+            marker=dict(
+                size=corridors["total_killed"].clip(upper=10) * 2.5,
+                color=corridors["total_killed"],
+                colorscale="YlOrRd",
+                cmin=2,
+                cmax=h3_data["total_killed"].max(),
+                opacity=0.85,
+                symbol="circle",
+                showscale=True,
+                colorbar=dict(
+                    title="Fatalities<br>(2012–2026)",
+                    thickness=12,
+                    len=0.5,
+                    x=1.0,
+                ),
+            ),
+            text=corridors.apply(
+                lambda r: f"<b>Corridor Cluster</b><br>"
+                          f"Killed: {int(r['total_killed'])}<br>"
+                          f"Crashes: {int(r['crash_count'])}<br>"
+                          f"Top Factor: {r['top_factor']}<br>"
+                          f"Road User: {r['dominant_user']}<br>"
+                          f"Neighbors: {int(r['fatal_neighbors'])}",
+                axis=1,
+            ),
+            hoverinfo="text",
+            name="Corridor Cluster",
+        ))
+
+        # ── Isolated hotspots ─────────────────────────────────────
+        fig.add_trace(go.Scattermapbox(
+            lat=isolated["lat"],
+            lon=isolated["lng"],
+            mode="markers",
+            marker=dict(
+                size=isolated["total_killed"].clip(upper=10) * 2.5,
+                color=isolated["total_killed"],
+                colorscale="YlOrRd",
+                cmin=2,
+                cmax=h3_data["total_killed"].max(),
+                opacity=0.85,
+                symbol="diamond",
+            ),
+            text=isolated.apply(
+                lambda r: f"<b>Isolated Hotspot</b><br>"
+                          f"Killed: {int(r['total_killed'])}<br>"
+                          f"Crashes: {int(r['crash_count'])}<br>"
+                          f"Top Factor: {r['top_factor']}<br>"
+                          f"Road User: {r['dominant_user']}<br>"
+                          f"Neighbors: {int(r['fatal_neighbors'])}",
+                axis=1,
+            ),
+            hoverinfo="text",
+            name="Isolated Hotspot",
+        ))
+
+        fig.update_layout(
+            mapbox=dict(
+                style="carto-positron",
+                zoom=10,
+                center={"lat": 40.680, "lon": -73.950},
+            ),
+            title=dict(
+                text="Fatal Crash Hotspots — Corridor Clusters vs Isolated Hotspots<br>"
+                     "<sup>NYC 2012–2026 · Circles = corridors (3+ neighboring cells) · "
+                     "Diamonds = isolated intersections · Size = fatalities</sup>",
+                x=0,
+                font_size=16,
+            ),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=0.01,
+                xanchor="left",
+                x=0.01,
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="rgba(0,0,0,0.2)",
+                borderwidth=1,
+                font_size=13,
+            ),
+            margin=dict(l=0, r=0, t=70, b=0),
+            height=650,
+        )
+
+        return fig
+
+    plot_h3_poster_map(h3_data_classified)
+    return
+
+
+@app.cell
+def _(go, h3_data_classified, pd):
+    def plot_h3_side_by_side(h3_data: pd.DataFrame) -> go.Figure:
+        import h3 as h3lib
+        from plotly.subplots import make_subplots
+
+        corridors = h3_data[h3_data["pattern"] == "corridor"].copy()
+        isolated  = h3_data[h3_data["pattern"] == "isolated"].copy()
+
+        def get_centers(subset):
+            centers = subset["h3_cell"].apply(
+                lambda c: h3lib.cell_to_latlng(c)
+            )
+            subset = subset.copy()
+            subset["lat"] = centers.apply(lambda x: x[0])
+            subset["lng"] = centers.apply(lambda x: x[1])
+            return subset
+
+        corridors = get_centers(corridors)
+        isolated  = get_centers(isolated)
+
+        max_killed = h3_data["total_killed"].max()
+
+        def make_hover(r, pattern):
+            return (
+                f"<b>{pattern}</b><br>"
+                f"Killed: {int(r['total_killed'])}<br>"
+                f"Crashes: {int(r['crash_count'])}<br>"
+                f"Top Factor: {r['top_factor']}<br>"
+                f"Road User: {r['dominant_user']}"
+            )
+
+        fig = make_subplots(
+            rows=1, cols=2,
+            subplot_titles=[
+                f"Corridor Clusters  ({len(corridors)} cells)",
+                f"Isolated Hotspots  ({len(isolated)} cells)",
+            ],
+            specs=[[{"type": "mapbox"}, {"type": "mapbox"}]],
+            horizontal_spacing=0.02,
+        )
+
+        map_config = dict(
+            zoom=9.8,
+            center={"lat": 40.680, "lon": -73.950},
+            style="carto-positron",
+        )
+
+        shared_marker = dict(
+            colorscale="YlOrRd",
+            cmin=2,
+            cmax=max_killed,
+            opacity=0.85,
+        )
+
+        # ── Left: Corridors ───────────────────────────────────────
+        fig.add_trace(go.Scattermapbox(
+            lat=corridors["lat"],
+            lon=corridors["lng"],
+            mode="markers",
+            marker=dict(
+                **shared_marker,
+                size=corridors["total_killed"].clip(upper=10) * 2.8,
+                color=corridors["total_killed"],
+                showscale=False,
+                symbol="circle",
+            ),
+            text=corridors.apply(
+                lambda r: make_hover(r, "Corridor Cluster"), axis=1
+            ),
+            hoverinfo="text",
+            name="Corridor",
+        ), row=1, col=1)
+
+        # ── Right: Isolated ───────────────────────────────────────
+        fig.add_trace(go.Scattermapbox(
+            lat=isolated["lat"],
+            lon=isolated["lng"],
+            mode="markers",
+            marker=dict(
+                **shared_marker,
+                size=isolated["total_killed"].clip(upper=10) * 2.8,
+                color=isolated["total_killed"],
+                showscale=True,
+                symbol="circle",
+                colorbar=dict(
+                    title="Fatalities<br>(2012–2026)",
+                    thickness=12,
+                    len=0.6,
+                    x=1.01,
+                ),
+            ),
+            text=isolated.apply(
+                lambda r: make_hover(r, "Isolated Hotspot"), axis=1
+            ),
+            hoverinfo="text",
+            name="Isolated",
+        ), row=1, col=2)
+
+        fig.update_layout(
+            mapbox=map_config,
+            mapbox2=map_config,
+            title=dict(
+                text=(
+                    "Fatal Crash Hotspots — NYC 2012–2026<br>"
+                    "<sup>Left: corridor clusters (3+ neighboring fatal cells) — "
+                    "systemic road design issues &nbsp;|&nbsp; "
+                    "Right: isolated hotspots — specific intersection failures · "
+                    "Size = fatalities</sup>"
+                ),
+                x=0,
+                font_size=15,
+            ),
+            showlegend=False,
+            margin=dict(l=0, r=60, t=80, b=0),
+            height=600,
+        )
+
+        return fig
+
+    plot_h3_side_by_side(h3_data_classified)
     return
 
 

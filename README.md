@@ -16,7 +16,7 @@ This project implements a robust ETL pipeline for NYC crash data with:
 
 - **Dataset**: [NYC Motor Vehicle Collisions - Crashes](https://data.cityofnewyork.us/Public-Safety/Motor-Vehicle-Collisions-Crashes/h9gi-nx95)
 - **Provider**: NYC Open Data (Socrata API)
-- **Coverage**: July 2014 - Present
+- **Coverage**: July 2012 - Present
 - **Update Frequency**: Daily
 - **Current Size**: ~1.95M records, 28 columns
 
