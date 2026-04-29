@@ -12,12 +12,13 @@ def _():
     import plotly.express as px
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
+    import matplotlib.pyplot as plt
     import re
     import json
     import h3 as h3lib
     import warnings
     warnings.filterwarnings("ignore")
-    return go, gpd, h3lib, make_subplots, mo, pd, px, re
+    return go, gpd, h3lib, make_subplots, mo, pd, plt, px, re
 
 
 @app.cell
@@ -702,6 +703,162 @@ def _(
     ---
     *Analysis: Remy Ndayizeye · TDSP Navigator · April 2026*
     """)
+    return
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Test new feature
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md("""
+    ### Spatial Hotspot Analysis — H3 Hexagonal Binning
+    """)
+    return
+
+
+@app.cell
+def _():
+    # Install h3 if needed
+    import subprocess
+    subprocess.run(["pip", "install", "h3", "--break-system-packages"], 
+                   capture_output=True)
+    import h3
+
+    return (h3,)
+
+
+@app.cell
+def _(df, h3):
+    # 1. Filter and Clean (Using a unique name to avoid redefinition errors)
+    # We use .copy() to ensure we aren't modifying the original 'df'
+    crash_geo = df[
+        df["latitude"].notna() & 
+        df["longitude"].notna() &
+        df["latitude"].between(40.4, 40.95) & 
+        df["longitude"].between(-74.3, -73.7)
+    ].copy()
+
+    # 2. Convert to H3 hexagons (Resolution 9 is ~0.1 km²)
+    # Note: Using cell_to_boundary check if needed, but latlng_to_cell is standard v4
+    crash_geo["h3_index"] = crash_geo.apply(
+        lambda row: h3.latlng_to_cell(row["latitude"], row["longitude"], 8),
+        axis=1
+    )
+
+    # 3. Aggregate metrics by hexagon
+    h3_agg = crash_geo.groupby("h3_index").agg(
+        crashes=("collision_id", "count"),
+        killed=("number_of_persons_killed", "sum"),
+        injured=("number_of_persons_injured", "sum"),
+        ped_killed=("number_of_pedestrians_killed", "sum"),
+        cyc_killed=("number_of_cyclist_killed", "sum"),
+    ).reset_index()
+
+    # 4. Calculate centroids and rates for visualization
+    h3_agg["lat"] = h3_agg["h3_index"].apply(lambda x: h3.cell_to_latlng(x)[0])
+    h3_agg["lon"] = h3_agg["h3_index"].apply(lambda x: h3.cell_to_latlng(x)[1])
+    h3_agg["fatality_rate"] = h3_agg["killed"] / h3_agg["crashes"] * 1000
+
+    print(f"Analyzed {len(h3_agg):,} hexagons")
+    return (h3_agg,)
+
+
+@app.cell
+def _():
+    # 1. Geometry Helper (Type-safe and version-agnostic)
+    from matplotlib.collections import PolyCollection
+    import numpy as np
+    import contextily as cx
+
+    return PolyCollection, cx, np
+
+
+@app.cell
+def _(PolyCollection, cx, h3, h3_agg, np, plt):
+    # 1. Geometry Helper
+    def get_hex_boundary(hex_id):
+        h_str = str(hex_id).strip().lower()
+        try:
+            func = h3.cell_to_boundary if hasattr(h3, 'cell_to_boundary') else h3.h3_to_geo_boundary
+            points = func(h_str)
+            return [(p[1], p[0]) for p in points]
+        except:
+            return None
+
+    # 2. Data Filtering
+    significant_zones = h3_agg[h3_agg["crashes"] >= 5].copy()
+    significant_zones["vru_total"] = significant_zones["ped_killed"] + significant_zones["cyc_killed"]
+
+    # 3. Lenses with Raw Strings (r"") for LaTeX math support
+    lenses = [
+        {
+            "df": significant_zones.nlargest(300, "crashes"), 
+            "col": "crashes", 
+            "cmap": "YlOrRd", 
+            "title": r"Systemic Volume" + "\n" + r"(Total Crash Count $n$)"
+        },
+        {
+            "df": significant_zones[significant_zones["killed"] > 0].nlargest(300, "fatality_rate"), 
+            "col": "fatality_rate", 
+            "cmap": "Reds", 
+            "title": r"Fatal Severity" + "\n" + r"($\frac{Deaths}{Crashes} \times 1000$)"
+        },
+        {
+            "df": significant_zones[significant_zones["vru_total"] > 0].nlargest(300, "vru_total"), 
+            "col": "vru_total", 
+            "cmap": "PuRd", 
+            "title": r"VRU Priority" + "\n" + "(Sum of vulnerable user casualties)"
+        }
+    ]
+
+    # 4. Plotting
+    midnight_grey = '#3B3B3B' 
+    fig, axes = plt.subplots(1, 3, figsize=(24, 11), facecolor=midnight_grey)
+
+    for ax, lens in zip(axes, lenses):
+        ax.set_facecolor(midnight_grey)
+
+        verts, vals = [], []
+        for idx, row in lens["df"].iterrows():
+            poly = get_hex_boundary(row["h3_index"])
+            if poly:
+                verts.append(poly)
+                vals.append(row[lens["col"]])
+
+        if verts:
+            pc = PolyCollection(
+                verts, array=np.array(vals), cmap=lens["cmap"], 
+                edgecolors='white', linewidths=0.2, alpha=0.75, zorder=3
+            )
+            ax.add_collection(pc)
+
+            cb = fig.colorbar(pc, ax=ax, shrink=0.3, aspect=20, pad=0.02)
+            cb.ax.yaxis.set_tick_params(color='white', labelcolor='white', labelsize=8)
+            cb.outline.set_edgecolor('white')
+
+        if not significant_zones.empty:
+            ax.set_xlim(significant_zones["lon"].min() - 0.01, significant_zones["lon"].max() + 0.01)
+            ax.set_ylim(significant_zones["lat"].min() - 0.01, significant_zones["lat"].max() + 0.01)
+
+        cx.add_basemap(ax, crs="EPSG:4326", source=cx.providers.CartoDB.DarkMatterNoLabels, alpha=0.4, zorder=1)
+
+        # Using a slightly smaller font for the sub-details to keep it clean
+        ax.set_title(lens["title"], color='white', fontsize=14, fontweight='bold', pad=20)
+        ax.axis('off')
+
+    plt.tight_layout()
+    plt.show()
     return
 
 
