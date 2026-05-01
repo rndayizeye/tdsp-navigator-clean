@@ -862,5 +862,10 @@ def _(PolyCollection, cx, h3, h3_agg, np, plt):
     return
 
 
+@app.cell
+def _():
+    return
+
+
 if __name__ == "__main__":
     app.run()
