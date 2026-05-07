@@ -184,7 +184,7 @@ def _(df, px):
     annual = annual[annual["year"] >= 2014]
 
     fig_annual = px.line(
-        annual, x="year", y=["killed", "injured"],
+        annual, x="year", y="killed",
         title="Annual Fatalities and Injuries Since Vision Zero Launch (2014)",
         labels={"year": "Year", "value": "Count", "variable": ""},
         markers=True,
@@ -192,6 +192,11 @@ def _(df, px):
     )
     fig_annual.update_layout(height=380)
     fig_annual
+    return
+
+
+@app.cell
+def _():
     return
 
 
@@ -995,7 +1000,7 @@ def _(df, pd, px):
     fig_vz = px.line(
         vz, x="year",
         y=["fatality_rate", "ped_rate", "cyc_rate"],
-        title="Vision Zero Progress: Fatality Rate per 100,000 Crashes by Year",
+        title="Fatality Rate per 100,000 Crashes by Year",
         labels={"year": "Year", "value": "Rate per 100k Crashes", "variable": ""},
         markers=True,
         color_discrete_map={
@@ -1004,7 +1009,14 @@ def _(df, pd, px):
             "cyc_rate": "#1f77b4",
         },
     )
-    fig_vz.update_layout(height=400)
+    fig_vz.update_layout(height=500, 
+                        legend=dict(orientation='h',x=0.5, y=-0.2, xanchor='center',yanchor='top'),
+                         title=dict(x=0.5, y=0.9, xanchor='center', yanchor='top')
+                        )
+    # Rename traces by looping (common for multiple lines)
+    new_names = {'fatality_rate': 'Fatality Rate', 'ped_rate': 'Pedestrian Fatality Rate', 'cyc_rate': 'Cyclist Fatality Rate'}
+    fig_vz.for_each_trace(lambda t: t.update(name=new_names.get(t.name, t.name)))
+
     fig_vz
     return
 
