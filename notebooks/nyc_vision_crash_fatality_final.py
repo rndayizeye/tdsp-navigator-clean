@@ -1,7 +1,19 @@
 import marimo
 
-__generated_with = "0.23.2"
+__generated_with = "0.23.5"
 app = marimo.App(width="full")
+
+
+@app.cell
+def _(subprocess):
+    """Install the ruptures library for change point analysis to the requirements_analysis.text"""
+    try:
+        import ruptures as rpt
+    except ImportError:
+        print("Installing ruptures for change point detection...")
+        subprocess.run(['pip','install','ruptures','--break-system-packages'],capture_output=True)
+        import ruptures as rpt
+    return (rpt,)
 
 
 @app.cell
@@ -617,7 +629,6 @@ def _(corridors, go, h3_classified, h3lib, isolated, make_subplots, mo):
     3. **Data-driven targeting** using this H3 analysis to rank intervention sites by impact per dollar
         """),
     ])
-
     return cor, iso
 
 
@@ -830,6 +841,213 @@ def _(
     return (street_stats,)
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Change Point Analysis — When Did Hotspots Emerge?
+
+    **Change point detection** identifies the specific time when crash patterns shifted at
+    an intersection. This reveals:
+
+    - **When** an intersection became dangerous (not just that it is dangerous)
+    - **What** might have caused the change (construction, signal changes, new development)
+    - **Which** interventions are urgent (recent deteriorations need immediate action)
+
+    We analyze the top 20 isolated intersection hotspots to identify:
+    1. **Recent emergent hotspots** — became dangerous after 2020 (COVID-related)
+    2. **Persistent hotspots** — dangerous for entire period (chronic problems)
+    3. **Worsening hotspots** — gradual deterioration over time
+    4. **Sudden spikes** — specific incident or change triggered danger
+    """)
+    return
+
+
+@app.cell
+def _(df,h3lib, pd, rpt):
+    def detect_intersection_change_points(
+        df: pd.DataFrame,
+        h3_classified: pd.DataFrame,
+        top_n: int=20,
+        min_crashes_per_period: int =2,
+    ) -> pd.DataFrame:
+        """
+        Takes the full crashes dataframe, the h3 classified dataframe, top_n deadliest hotspots, 
+        and a minimum number of crashes for the change point analysis default as 2 and 
+        For each top isolated hotspot, detect when the crash patterns changed.
+        
+        Returns DataFrame with:
+            - H3 cell ID
+            - Location (lat/lng)
+            - Change point year (if detected)
+            - Pre/post crash rates
+            - Pattern classification
+        """
+        # Get top isolated hotspots
+        isolated = h3_classified[h3_classified["pattern"]== "Isolated Hotspot"]
+        top_hotspots = isolated.nlargest(top_n, "total_killed")
+
+        results = []
+
+        for idx, hotspot in top_hotspots.iterrows():
+            cell_id = hotspot["h3_cell"]
+            lat,lng = h3lib.cell_to_latlng(cell_id)
+
+            #Get all fatal crashes in this cell
+            cell_crashes = df[df["any_killed"] & df["latitude"].notna() & df["longitude"].notna()].copy()
+
+            #Filter to crashes in this specific H3 cell
+            cell_crashes["h3_cell"] = cell_crashes.apply(
+                lambda r: h3lib.latlng_to_cell(r["latitude"],r["longitude"], 9),
+                axis = 1
+            )
+            cell_crashes = cell_crashes[cell_crashes["h3_cell"]== cell_id]
+            if len(cell_crashes) < 10: # Setting at 10 because changepoint need sufficient data 
+                continue
+            #Create time series: quaterly crash counts (more stable than monthly)
+            cell_crashes['quarter'] = pd.PeriodIndex(cell_crashes["crash_date"], freq="Q")
+            quarterly_counts = (
+                cell_crashes.groupby("quarter")
+                    .size().reindex(
+                        pd.period_range(start=cell_crashes["quarter"].min(),
+                                        end=cell_crashes["quarter"].max(),freq="Q"),
+                        fill_value=0))
+
+            # convert signal values to an array 
+            signal = quarterly_counts.values
+
+            if len(signal) < 8: # Need at least 2 years of data
+                continue
+
+            #detect change points using PELT algorithm (Pruned Exact Linear Time)
+            try:
+                model = rpt.Pelt(model="rdf", min_size=4, jump=1).fit(signal=signal)
+                change_points = model.predict(pen=10) # Penalty parameter (higher = fewer changes)
+
+                #Ruptures indices that need to be converted into quarters
+                if len(change_points) > 1: #At least one change point (last is always the end)
+                    #get the most significant change point (largest mean shift)
+                    best_cp_idx = None # initialize the variable for the best changepoint index
+                    max_shift = 0 # mean difference before and after the most significant change
+
+                    for cp in change_points[:-1]: # exclude the final end point
+                        pre_mean = signal[:cp].mean()
+                        post_mean =signal[cp:].mean()
+                        shift = abs(post_mean - pre_mean)
+
+                        if shift > max_shift:
+                            max_shift = shift
+                            best_cp_idx = cp
+
+                    if best_cp_idx is not None:
+                        change_quarter = quarterly_counts.index[best_cp_idx]
+                        change_year = change_quarter.year
+
+                        pre_rate = signal[:best_cp_idx].mean()
+                        post_rate = signal[best_cp_idx:].mean()
+                        percent_change = ((post_rate - pre_rate) / pre_rate * 100) if pre_rate > 0 else 0
+
+                        #Classify pattern
+                        if change_year >= 2020:
+                            pattern = "Recent Emergence (2020+)"
+                        elif percent_change > 50:
+                            pattern = "Sudden Spike"
+                        elif percent_change > 20:
+                            pattern = "Gradual Worsening"
+                        elif percent_change < - 20:
+                            pattern = "Improvement After Change"
+                        else:
+                            pattern = "Stable Pattern"
+                        results.append({
+                                "h3_cell": cell_id,
+                                "lat": lat,
+                                "lng": lng,
+                                "total_killed": hotspot["total_killed"],
+                                "crash_count": hotspot["crash_count"],
+                                "borough": hotspot["borough"],
+                                "change_point_year": change_year,
+                                "change_point_quarter": str(change_quarter),
+                                "pre_rate": round(pre_rate, 2),
+                                "post_rate": round(post_rate, 2),
+                                "percent_change": round(percent_change, 1),
+                                "pattern": pattern,
+                        })
+                    else:
+                        #No significant change point
+                        results.append({
+                            "h3_cell": cell_id,
+                            "lat": lat,
+                            "lng": lng,
+                            "total_killed": hotspot["total_killed"],
+                            "crash_count": hotspot["crash_count"],
+                            "borough": hotspot["borough"],
+                            "change_point_year": None,
+                            "change_point_quarter": None,
+                            "pre_rate": None,
+                            "post_rate": None,
+                            "percent_change": None,
+                            "pattern": "Persistent Hotspot (No Change)",
+                        })
+                else:
+                    # No change points detected
+                    results.append({
+                        "h3_cell": cell_id,
+                        "lat": lat,
+                        "lng": lng,
+                        "total_killed": hotspot["total_killed"],
+                        "crash_count": hotspot["crash_count"],
+                        "borough": hotspot["borough"],
+                        "change_point_year": None,
+                        "change_point_quarter": None,
+                        "pre_rate": None,
+                        "post_rate": None,
+                        "percent_change": None,
+                        "pattern": "Persistent Hotspot (No Change)",
+                    })
+            except Exception as e:
+                print(f"Error processing cell {cell_id}: {e}")
+                continue
+
+            return pd.DataFrame(results).sort_values("total_killed", ascending=False)
+
+                                   
+
+    return (detect_intersection_change_points,)
+
+
+@app.cell
+def _(change_points):
+    type(change_points)
+
+    return
+
+
+@app.cell
+def _(detect_intersection_change_points, df, h3_classified, mo):
+    #Execute change point analysis
+    change_points = detect_intersection_change_points(df, h3_classified, top_n=20)
+
+    # Count patterns
+    pattern_counts = change_points["pattern"].value_counts()
+    lines = [f"- **{pattern}**: {count} intersections" for pattern, count in pattern_counts.items()]
+    output = "\n".join(lines)
+
+    mo.md(f"""
+    ### Change Point Analysis Results
+    
+    Analyzed top 20 isolated intersection hotspots. Detected change points in crash patterns:
+    
+    **Pattern Distribution:**
+    print(f"{output}")
+    
+    **Interpretation:**
+    - **Recent Emergence (2020+)**: Became dangerous during/after COVID — likely behavioral changes
+    - **Sudden Spike**: Specific event triggered danger (construction, signal failure, development)
+    - **Gradual Worsening**: Slow deterioration over time — missed by annual reviews
+    - **Persistent Hotspot**: Dangerous throughout entire period — chronic infrastructure failure
+    """)
+    return (change_points,)
+
+
 @app.cell
 def _(mo):
     mo.md("""
@@ -894,8 +1112,7 @@ def _(df):
     h3_agg["fatality_rate"] = h3_agg["killed"] / h3_agg["crashes"] * 1000
 
     print(f"✓ Analyzed {len(h3_agg):,} hexagons for multi-lens visualization")
-
-    return PolyCollection, cx, h3, h3_agg, np
+    return PolyCollection, cx, h3, h3_agg, np, subprocess
 
 
 @app.cell
@@ -980,7 +1197,6 @@ def _(PolyCollection, cx, h3, h3_agg, np, plt):
 
     plt.tight_layout()
     plt.gca()
-
     return
 
 

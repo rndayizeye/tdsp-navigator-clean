@@ -1,10 +1,30 @@
 {
   "version": "1",
   "metadata": {
-    "marimo_version": "0.23.2",
+    "marimo_version": "0.23.5",
     "script_metadata_hash": null
   },
   "cells": [
+    {
+      "id": "GOYl",
+      "code_hash": "cb4849e8b0cec2e9f0dad4aec4943c37",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Installing ruptures for change point detection...\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
     {
       "id": "Hbol",
       "code_hash": "5c4e36f3235fd04088a33200623e86d1",
@@ -20,12 +40,12 @@
     },
     {
       "id": "MJUe",
-      "code_hash": "bd958973093933a50aff9c54b820bb0b",
+      "code_hash": "ae8d44186ba7f5fcb2ce1efc0bf042ff",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h1 id=\"nyc-traffic-fatality-analysis-vision-zero-policy-brief\">NYC Traffic Fatality Analysis \u2014 Vision Zero Policy Brief</h1>\n<span class=\"paragraph\"><strong>Remy Ndayizeye</strong><br />\nNortheast Big Data Innovation Hub \u00b7 National Student Data Corps \u00b7 U.S. DOT FHWA<br />\n<em>April 2026</em></span>\n<hr />\n<h2 id=\"executive-summary\">Executive Summary</h2>\n<span class=\"paragraph\">NYC DOT reported a historic milestone in January 2026: 205 traffic deaths in 2025, the lowest \ncount since record-keeping began in 1910 and a 31% reduction since Vision Zero launched in 2014. \nThis analysis extends that progress report by identifying the specific streets and intersections \nwhere the remaining 205 deaths occurred, enabling targeted intervention deployment for continued improvement.</span>\n<span class=\"paragraph\">This analysis examines 1.95 million NYC motor vehicle crashes (2012\u20132026) using street-level rankings \nand H3 hexagonal spatial analysis to identify the deadliest corridors and intersections and inform \nthe next phase of Vision Zero policy interventions.</span>\n<span class=\"paragraph\"><strong>Key Findings:</strong></span>\n<ol>\n<li><strong>Fatalities are highly concentrated</strong> \u2014 The top 20 streets account for a disproportionate \n   share of all traffic deaths, with five streets alone representing ~30% of fatalities. This \n   validates NYC DOT's corridor-focused approach while identifying additional high-priority targets.</li>\n<li><strong>Pedestrians bear the greatest burden</strong> \u2014 Vulnerable road users (pedestrians + cyclists) \n   account for 66% of all traffic fatalities (2012-2026 period) despite being a minority of road users. \n   In 2025 specifically, pedestrians represented 54% of deaths (111 of 205), underscoring the continued \n   need for pedestrian-focused interventions.</li>\n<li><strong>Most deaths occur at isolated intersections, not highway corridors</strong> \u2014 77% of fatal \n   crash hotspots are isolated surface street intersections rather than corridor clusters, \n   meaning most deaths are addressable through city-level interventions on a shorter timeline \n   than multi-year highway reconstruction projects.</li>\n<li><strong>Different street types require different agencies</strong> \u2014 Highways need state-level \n   intervention (NYS DOT/MTA), while surface streets are under city control (NYC DOT/NYPD). \n   This analysis provides explicit agency jurisdiction mapping to streamline coordination.</li>\n<li><strong>High-leverage opportunities exist</strong> \u2014 While NYC DOT's recent corridor redesigns (Queens Boulevard, \n   31st Avenue, Bronx/Queens bus lanes) have demonstrated effectiveness, this analysis identifies \n   200+ additional isolated intersection hotspots where targeted treatments can achieve similar results.</li>\n</ol>\n<hr />\n<span class=\"paragraph\"><strong>Data Source:</strong> NYC Open Data \u2014 Motor Vehicle Collisions (Socrata API)<br />\n<strong>Pipeline:</strong> Kedro 0.19.15 \u00b7 Incremental watermark-based ingestion \u00b7 28-column parquet schema<br />\n<strong>Spatial Method:</strong> H3 hexagonal binning (resolution 9, ~175m diameter cells)<br />\n<strong>Analysis Period:</strong> July 2012 \u2013 April 2026 (13.75 years)<br />\n<strong>Context:</strong> Complements NYC DOT's 2025 Year-End Traffic Safety Report (Jan 2026)</span></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h1 id=\"nyc-traffic-fatality-analysis-vision-zero-policy-brief\">NYC Traffic Fatality Analysis \u2014 Vision Zero Policy Brief</h1>\n<span class=\"paragraph\"><strong>Remy Ndayizeye</strong>\nNortheast Big Data Innovation Hub \u00b7 National Student Data Corps \u00b7 U.S. DOT FHWA\n<em>April 2026</em></span>\n<hr />\n<h2 id=\"executive-summary\">Executive Summary</h2>\n<span class=\"paragraph\">NYC DOT reported a historic milestone in January 2026: 205 traffic deaths in 2025, the lowest\ncount since record-keeping began in 1910 and a 31% reduction since Vision Zero launched in 2014.\nThis analysis extends that progress report by identifying the specific streets and intersections\nwhere the remaining 205 deaths occurred, enabling targeted intervention deployment for continued improvement. </span>\n<span class=\"paragraph\">This analysis examines 1.95 million NYC motor vehicle crashes (2012\u20132026) using street-level rankings\nand H3 hexagonal spatial analysis to identify the deadliest corridors and intersections and inform\nthe next phase of Vision Zero policy interventions.</span>\n<span class=\"paragraph\"><strong>Key Findings:</strong></span>\n<ol>\n<li><strong>Fatalities are highly concentrated</strong> \u2014 The top 20 streets account for a disproportionate\n   share of all traffic deaths, with five streets alone representing ~30% of fatalities. This\n   validates NYC DOT's corridor-focused approach while identifying additional high-priority targets.</li>\n<li><strong>Pedestrians bear the greatest burden</strong> \u2014 Vulnerable road users (pedestrians + cyclists)\n   account for 66% of all traffic fatalities (2012-2026 period) despite being a minority of road users.\n   In 2025 specifically, pedestrians represented 54% of deaths (111 of 205), underscoring the continued\n   need for pedestrian-focused interventions.</li>\n<li><strong>Most deaths occur at isolated intersections, not highway corridors</strong> \u2014 77% of fatal\n   crash hotspots are isolated surface street intersections rather than corridor clusters,\n   meaning most deaths are addressable through city-level interventions on a shorter timeline\n   than multi-year highway reconstruction projects.</li>\n<li><strong>Different street types require different agencies</strong> \u2014 Highways need state-level\n   intervention (NYS DOT/MTA), while surface streets are under city control (NYC DOT/NYPD).\n   This analysis provides explicit agency jurisdiction mapping to streamline coordination.</li>\n<li><strong>High-leverage opportunities exist</strong> \u2014 While NYC DOT's recent corridor redesigns (Queens Boulevard,\n   31st Avenue, Bronx/Queens bus lanes) have demonstrated effectiveness, this analysis identifies\n   200+ additional isolated intersection hotspots where targeted treatments can achieve similar results.</li>\n</ol>\n<hr />\n<span class=\"paragraph\"><strong>Data Source:</strong> NYC Open Data \u2014 Motor Vehicle Collisions (Socrata API)\n<strong>Pipeline:</strong> Kedro 0.19.15 \u00b7 Incremental watermark-based ingestion \u00b7 28-column parquet schema\n<strong>Spatial Method:</strong> H3 hexagonal binning (resolution 9, ~175m diameter cells)\n<strong>Analysis Period:</strong> July 2012 \u2013 April 2026 (13.75 years)\n<strong>Context:</strong> Complements NYC DOT's 2025 Year-End Traffic Safety Report (Jan 2026)</span></span>"
           }
         }
       ],
@@ -132,7 +152,7 @@
     },
     {
       "id": "BYtC",
-      "code_hash": "9a8894d1a2a1430e742c0c75d020d1e7",
+      "code_hash": "6886338ffaa59e54c9498fb01a33fcf3",
       "outputs": [
         {
           "type": "data",
@@ -163,7 +183,7 @@
         {
           "type": "data",
           "data": {
-            "text/html": "<div style='display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><marimo-ui-element object-id='Kclp-0' random-id='9c765fd4-694c-8e78-1427-3bfeb283a33c'><marimo-dropdown data-initial-value='[&quot;ALL&quot;]' data-label='&quot;&lt;span class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&gt;&lt;span class=&#92;&quot;paragraph&#92;&quot;&gt;Borough&lt;/span&gt;&lt;/span&gt;&quot;' data-options='[&quot;ALL&quot;,&quot;BRONX&quot;,&quot;BROOKLYN&quot;,&quot;MANHATTAN&quot;,&quot;QUEENS&quot;,&quot;STATEN ISLAND&quot;]' data-allow-select-none='false' data-searchable='false' data-full-width='false'></marimo-dropdown></marimo-ui-element><marimo-ui-element object-id='Kclp-1' random-id='0722738a-53da-2d94-77de-1bfa2cb7b20f'><marimo-dropdown data-initial-value='[&quot;ALL&quot;]' data-label='&quot;&lt;span class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&gt;&lt;span class=&#92;&quot;paragraph&#92;&quot;&gt;Street Type&lt;/span&gt;&lt;/span&gt;&quot;' data-options='[&quot;ALL&quot;,&quot;Highway&quot;,&quot;Surface Street&quot;]' data-allow-select-none='false' data-searchable='false' data-full-width='false'></marimo-dropdown></marimo-ui-element></div>"
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><marimo-ui-element object-id='Kclp-0' random-id='d4be4247-5f3b-de5c-7dfa-10093af60bdc'><marimo-dropdown data-initial-value='[&quot;ALL&quot;]' data-label='&quot;&lt;span class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&gt;&lt;span class=&#92;&quot;paragraph&#92;&quot;&gt;Borough&lt;/span&gt;&lt;/span&gt;&quot;' data-options='[&quot;ALL&quot;,&quot;BRONX&quot;,&quot;BROOKLYN&quot;,&quot;MANHATTAN&quot;,&quot;QUEENS&quot;,&quot;STATEN ISLAND&quot;]' data-allow-select-none='false' data-searchable='false' data-full-width='false'></marimo-dropdown></marimo-ui-element><marimo-ui-element object-id='Kclp-1' random-id='868fbc34-e5a1-0bac-3788-8e0b067e09e6'><marimo-dropdown data-initial-value='[&quot;ALL&quot;]' data-label='&quot;&lt;span class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&gt;&lt;span class=&#92;&quot;paragraph&#92;&quot;&gt;Street Type&lt;/span&gt;&lt;/span&gt;&quot;' data-options='[&quot;ALL&quot;,&quot;Highway&quot;,&quot;Surface Street&quot;]' data-allow-select-none='false' data-searchable='false' data-full-width='false'></marimo-dropdown></marimo-ui-element></div>"
           }
         }
       ],
@@ -209,6 +229,65 @@
       "console": []
     },
     {
+      "id": "Fuay",
+      "code_hash": "2a2d7a53803f80a8c4048bf89130be50",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"change-point-analysis-when-did-hotspots-emerge\">Change Point Analysis \u2014 When Did Hotspots Emerge?</h3>\n<span class=\"paragraph\"><strong>Change point detection</strong> identifies the specific time when crash patterns shifted at \nan intersection. This reveals:</span>\n<ul>\n<li><strong>When</strong> an intersection became dangerous (not just that it is dangerous)</li>\n<li><strong>What</strong> might have caused the change (construction, signal changes, new development)</li>\n<li><strong>Which</strong> interventions are urgent (recent deteriorations need immediate action)</li>\n</ul>\n<span class=\"paragraph\">We analyze the top 20 isolated intersection hotspots to identify:</span>\n<ol>\n<li><strong>Recent emergent hotspots</strong> \u2014 became dangerous after 2020 (COVID-related)</li>\n<li><strong>Persistent hotspots</strong> \u2014 dangerous for entire period (chronic problems)</li>\n<li><strong>Worsening hotspots</strong> \u2014 gradual deterioration over time</li>\n<li><strong>Sudden spikes</strong> \u2014 specific incident or change triggered danger</li>\n</ol></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "XsyA",
+      "code_hash": "d91bf57b39c069439553c17ffcf3ea2a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "mNxW",
+      "code_hash": "741581e3e5dc8a7ff8ec9a5d6888af53",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<pre class='text-xs'>&lt;class &#x27;NoneType&#x27;&gt;</pre>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "xwPG",
+      "code_hash": "f596f6c65a6efc07474e58296bba70cc",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "'NoneType' object is not subscriptable",
+          "traceback": null
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "<span class=\"codehilite\"><div class=\"highlight\"><pre><span></span><span class=\"gt\">Traceback (most recent call last):</span>\n  File <span class=\"nb\">&quot;/var/folders/nj/l_35v6rd7yb4qtfyz13w0k_00000gn/T/marimo_29433/__marimo__cell_xwPG_.py&quot;</span>, line <span class=\"m\">5</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"n\">pattern_counts</span> <span class=\"o\">=</span> <span class=\"n\">change_points</span><span class=\"p\">[</span><span class=\"s2\">&quot;pattern&quot;</span><span class=\"p\">]</span><span class=\"o\">.</span><span class=\"n\">value_counts</span><span class=\"p\">()</span>\n<span class=\"w\">                     </span><span class=\"pm\">~~~~~~~~~~~~~^^^^^^^^^^^</span>\n<span class=\"gr\">TypeError</span>: <span class=\"n\">&#39;NoneType&#39; object is not subscriptable</span>\n</pre></div>\n</span>",
+          "mimetype": "application/vnd.marimo+traceback"
+        }
+      ]
+    },
+    {
       "id": "iLit",
       "code_hash": "bf2c4f33836ff31eefe9cc63c810b2f7",
       "outputs": [
@@ -223,7 +302,7 @@
     },
     {
       "id": "ZHCJ",
-      "code_hash": "92c74b3aec14a662ed42e8445010d841",
+      "code_hash": "fbfd7ae7839138c533ee5bb693397a37",
       "outputs": [
         {
           "type": "data",
@@ -243,7 +322,7 @@
     },
     {
       "id": "ROlb",
-      "code_hash": "5e8dbdaeb26f15edc06be5af38d7ee4c",
+      "code_hash": "e3e68a73762fec26d53e515038e05b27",
       "outputs": [
         {
           "type": "data",
