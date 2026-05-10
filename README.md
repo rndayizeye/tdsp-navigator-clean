@@ -255,6 +255,12 @@ Each run only fetches records newer than `last_update`.
 
 ## 🔬 Research Focus
 
+The Marimo notebook (`nyc_fatality_analysis_lethality_paradox.py`) explores the shift in fatality post COVID:
+1. **Temporal patterns** - total crashes vs fatality rate since 2012 to 2026 
+2. **Contributing Factors** - Pre-Post COVID comparison of contributing factors
+2. **Geospatial patterns** - H3 crash classification into Highway vs. Intersection 
+3. **Priotization** - Priority Scoring using Recency-Weighted Hybrid Model
+
 The Marimo notebook (`notebooks/analysis.py`) covers three areas with a Vision Zero policy lens:
 
 1. **Temporal patterns** — crashes by hour, day of week, and annual fatality trends since Vision Zero launched in 2014
