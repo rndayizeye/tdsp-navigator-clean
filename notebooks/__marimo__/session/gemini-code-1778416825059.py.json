@@ -1,0 +1,100 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.23.5",
+    "script_metadata_hash": null
+  },
+  "cells": [
+    {
+      "id": "Hbol",
+      "code_hash": "0fc30cd311c82f373a571d7b52f4627f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "MJUe",
+      "code_hash": "697e1aed204c5ed6bc1a061c398ce726",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h1 id=\"nyc-traffic-fatality-analysis-vision-zero-policy-brief\">NYC Traffic Fatality Analysis \u2014 Vision Zero Policy Brief</h1>\n<span class=\"paragraph\"><strong>Project Lead:</strong> Remy Ndayizeye<br />\n<strong>Context:</strong> Northeast Big Data Innovation Hub \u00b7 National Student Data Corps<br />\n<strong>Date:</strong> May 2026</span>\n<hr />\n<h2 id=\"executive-summary-the-lethality-paradox\">Executive Summary: The Lethality Paradox</h2>\n<span class=\"paragraph\">NYC reached a historic safety milestone in 2025 with 205 traffic deaths\u2014the lowest count since 1910. \nHowever, a critical <strong>\"Lethality Paradox\"</strong> has emerged: while total crashes are down, the likelihood of a crash \nbeing fatal has increased since 2020. This analysis utilizes a <strong>Recency-Weighted Hybrid Model</strong> to distinguish between chronic infrastructure failures and emerging behavioral crises.</span>\n<hr />\n<span class=\"paragraph\"><strong>Data Source:</strong> NYC Open Data \u2014 1.95M crashes (July 2012 \u2013 April 2026)</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "vblA",
+      "code_hash": "cf7efdc894ffe49141b5d1425ed5cfcb",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "5f5dba369e762be85fabd7775851cb06",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "ad3056adf18a3dd186119ad643fd4e95",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "34f0c84967d32b8d32db2d25b45b6bc8",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "777fac9b4fc191d85a0bba3cabf8db4f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    }
+  ]
+}

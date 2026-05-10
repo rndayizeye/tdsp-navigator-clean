@@ -863,7 +863,7 @@ def _(mo):
 
 
 @app.cell
-def _(df,h3lib, pd, rpt):
+def _(h3lib, pd, rpt):
     def detect_intersection_change_points(
         df: pd.DataFrame,
         h3_classified: pd.DataFrame,
@@ -874,7 +874,7 @@ def _(df,h3lib, pd, rpt):
         Takes the full crashes dataframe, the h3 classified dataframe, top_n deadliest hotspots, 
         and a minimum number of crashes for the change point analysis default as 2 and 
         For each top isolated hotspot, detect when the crash patterns changed.
-        
+
         Returns DataFrame with:
             - H3 cell ID
             - Location (lat/lng)
@@ -1009,7 +1009,7 @@ def _(df,h3lib, pd, rpt):
 
             return pd.DataFrame(results).sort_values("total_killed", ascending=False)
 
-                                   
+
 
     return (detect_intersection_change_points,)
 
@@ -1017,7 +1017,6 @@ def _(df,h3lib, pd, rpt):
 @app.cell
 def _(change_points):
     type(change_points)
-
     return
 
 
@@ -1033,12 +1032,12 @@ def _(detect_intersection_change_points, df, h3_classified, mo):
 
     mo.md(f"""
     ### Change Point Analysis Results
-    
+
     Analyzed top 20 isolated intersection hotspots. Detected change points in crash patterns:
-    
+
     **Pattern Distribution:**
     print(f"{output}")
-    
+
     **Interpretation:**
     - **Recent Emergence (2020+)**: Became dangerous during/after COVID — likely behavioral changes
     - **Sudden Spike**: Specific event triggered danger (construction, signal failure, development)
