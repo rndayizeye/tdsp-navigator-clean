@@ -315,7 +315,7 @@ pytest tests/pipelines/data_ingestion/test_nodes.py -v
 
 ## 👥 Authors
 
-- **Remyn Dayizeye** - [@rndayizeye](https://github.com/rndayizeye)
+- **Remy Ndayizeye** - [@rndayizeye](https://github.com/rndayizeye)
 
 ## 📄 License
 
